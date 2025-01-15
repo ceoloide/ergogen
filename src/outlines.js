@@ -143,12 +143,14 @@ const bezier = (config, name, points, outlines, units) => {
   }, units]
 }
 
+
 const hull = (config, name, points, outlines, units) => {
 
   // prepare params
   a.unexpected(config, `${name}`, ['concavity', 'extend', 'points'])
   const concavity = a.sane(config.concavity || 50, `${name}.concavity`, 'number')(units)
-  const extend = a.sane(config.extend || true, `${name}.extend`, 'boolean')(units)
+  // Extend should default to `true` if not defined
+  const extend = a.sane(config.extend === undefined || config.extend, `${name}.extend`, 'boolean')(units)
   const hull_points = a.sane(config.points, `${name}.points`, 'array')()
 
   // return shape function and its units
@@ -166,15 +168,42 @@ const hull = (config, name, points, outlines, units) => {
           const h = last_anchor.meta.height
           const rect = u.rect(w, h, [-w/2, -h/2])
           const model = last_anchor.position(rect)
-          let top_origin = model.paths.top.origin
-          let top_end =  model.paths.top.end
-          let bottom_origin =  model.paths.bottom.origin
-          let bottom_end =  model.paths.bottom.end
-          let model_origin = model.origin
+          const top_origin = model.paths.top.origin
+          const top_end =  model.paths.top.end
+          const bottom_origin =  model.paths.bottom.origin
+          const bottom_end =  model.paths.bottom.end
+          const model_origin = model.origin
           parsed_points.push([top_origin[0] + model_origin[0], top_origin[1] + model_origin[1]])
           parsed_points.push([top_end[0] + model_origin[0], top_end[1] + model_origin[1]])
           parsed_points.push([bottom_origin[0] + model_origin[0], bottom_origin[1] + model_origin[1]])
           parsed_points.push([bottom_end[0] + model_origin[0], bottom_end[1] + model_origin[1]])
+          // When width or height are too large, we need to add additional points along the sides, or
+          // the convex hull algorithm will fold "within" the key. Points are then added at regular
+          // intervals, their number being at least 2, since MakerJS places the first two points at
+          // either end of the path. When a side is longer than 18 divide the length of a side by
+          // that amount and add it to 2, this way we always have at least a middle point for sides
+          // longer than 18 
+          const l = 18
+          let intermediate_points = []
+          if (w > l) {
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.top, 2 + Math.floor(w / l)))
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.bottom, 2 + Math.floor(w / l)))
+          }
+          if (h > l) {
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.left, 2 + Math.floor(h / l)))
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.right, 2 + Math.floor(h / l)))
+          }
+          for (let i = 0; i < intermediate_points.length; i++) {
+            const p = intermediate_points[i];
+            if (!m.measure.isPointEqual(p, top_origin) &&
+              !m.measure.isPointEqual(p, top_end) &&
+              !m.measure.isPointEqual(p, bottom_origin) &&
+              !m.measure.isPointEqual(p, bottom_end)) {
+              // Not one of the corners
+              const intermediate_point = [p[0] + model_origin[0], p[1] + model_origin[1]]
+              parsed_points.push(intermediate_point)
+            }
+          }
         } else {
           parsed_points.push(last_anchor.p)
         }
