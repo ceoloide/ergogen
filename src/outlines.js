@@ -6,6 +6,7 @@ const Point = require('./point')
 const prep = require('./prepare')
 const anchor = require('./anchor').parse
 const filter = require('./filter').parse
+const hulljs = require('hull')
 
 const binding = (base, bbox, point, units) => {
 
@@ -111,6 +112,107 @@ const polygon = (config, name, points, outlines, units) => {
         const bbox = u.bbox(parsed_points)
         return [poly, bbox]
     }, units]
+}
+
+const bezier = (config, name, points, outlines, units) => {
+
+  // prepare params
+  a.unexpected(config, `${name}`, ['type', 'accuracy', 'points'])
+  const type = a.in(config.type || 'quadratic', `${name}.type`, ['cubic', 'quadratic'])
+  const control_points = {
+    'quadratic': 1,
+    'cubic': 2,
+  }
+  const accuracy = a.sane(config.accuracy || -1, `${name}.accuracy`, 'number')(units)
+  const bezier_points = a.sane(config.points, `${name}.points`, 'array')()
+  a.assert(config.points.length%(control_points[type]+1)==0, `${name}.points doesn't contain enough points to form a closed Bezier spline, there should be a multiple of ${control_points[type]+1} points.`)
+  
+  // return shape function and its units
+  return [point => {
+    const parsed_points = []
+    // the bezier starts at [0, 0] as it will be positioned later
+    // but we keep the point metadata for potential mirroring purposes
+    let last_anchor = new Point(0, 0, 0, point.meta)
+    let bezier_index = -1
+    for (const bezier_point of bezier_points) {
+        const bezier_name = `${name}.points[${++bezier_index}]`
+        last_anchor = anchor(bezier_point, bezier_name, points, last_anchor)(units)
+        parsed_points.push(last_anchor.p)
+    }
+    return u.bezier(parsed_points, control_points[type], accuracy)
+  }, units]
+}
+
+
+const hull = (config, name, points, outlines, units) => {
+
+  // prepare params
+  a.unexpected(config, `${name}`, ['concavity', 'extend', 'points'])
+  const concavity = a.sane(config.concavity || 50, `${name}.concavity`, 'number')(units)
+  // Extend should default to `true` if not defined
+  const extend = a.sane(config.extend === undefined || config.extend, `${name}.extend`, 'boolean')(units)
+  const hull_points = a.sane(config.points, `${name}.points`, 'array')()
+
+  // return shape function and its units
+  return [point => {
+    const parsed_points = []
+    // the poly starts at [0, 0] as it will be positioned later
+    // but we keep the point metadata for potential mirroring purposes
+    let last_anchor = new Point(0, 0, 0, point.meta)
+    let poly_index = -1
+    for (const poly_point of hull_points) {
+        const poly_name = `${name}.points[${++poly_index}]`
+        last_anchor = anchor(poly_point, poly_name, points, last_anchor)(units)
+        if(extend) {
+          const w = last_anchor.meta.width
+          const h = last_anchor.meta.height
+          const rect = u.rect(w, h, [-w/2, -h/2])
+          const model = last_anchor.position(rect)
+          const top_origin = model.paths.top.origin
+          const top_end =  model.paths.top.end
+          const bottom_origin =  model.paths.bottom.origin
+          const bottom_end =  model.paths.bottom.end
+          const model_origin = model.origin
+          parsed_points.push([top_origin[0] + model_origin[0], top_origin[1] + model_origin[1]])
+          parsed_points.push([top_end[0] + model_origin[0], top_end[1] + model_origin[1]])
+          parsed_points.push([bottom_origin[0] + model_origin[0], bottom_origin[1] + model_origin[1]])
+          parsed_points.push([bottom_end[0] + model_origin[0], bottom_end[1] + model_origin[1]])
+          // When width or height are too large, we need to add additional points along the sides, or
+          // the convex hull algorithm will fold "within" the key. Points are then added at regular
+          // intervals, their number being at least 2, since MakerJS places the first two points at
+          // either end of the path. When a side is longer than 18 divide the length of a side by
+          // that amount and add it to 2, this way we always have at least a middle point for sides
+          // longer than 18 
+          const l = 18
+          let intermediate_points = []
+          if (w > l) {
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.top, 2 + Math.floor(w / l)))
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.bottom, 2 + Math.floor(w / l)))
+          }
+          if (h > l) {
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.left, 2 + Math.floor(h / l)))
+            intermediate_points = intermediate_points.concat(m.path.toPoints(model.paths.right, 2 + Math.floor(h / l)))
+          }
+          for (let i = 0; i < intermediate_points.length; i++) {
+            const p = intermediate_points[i];
+            if (!m.measure.isPointEqual(p, top_origin) &&
+              !m.measure.isPointEqual(p, top_end) &&
+              !m.measure.isPointEqual(p, bottom_origin) &&
+              !m.measure.isPointEqual(p, bottom_end)) {
+              // Not one of the corners
+              const intermediate_point = [p[0] + model_origin[0], p[1] + model_origin[1]]
+              parsed_points.push(intermediate_point)
+            }
+          }
+        } else {
+          parsed_points.push(last_anchor.p)
+        }
+    }
+    const poly_points = hulljs(parsed_points, concavity)
+    let poly = u.poly(poly_points)
+    const bbox = u.bbox(poly_points)
+    return [poly, bbox]
+  }, units]
 }
 
 const outline = (config, name, points, outlines, units) => {
@@ -231,7 +333,8 @@ const whats = {
     circle,
     polygon,
     outline,
-    path
+    path,
+    hull
 }
 
 const expand_shorthand = (config, name, units) => {
@@ -282,7 +385,7 @@ exports.parse = (config, points, units) => {
 
             // process keys that are common to all part declarations
             const operation = u[a.in(part.operation || 'add', `${name}.operation`, ['add', 'subtract', 'intersect', 'stack'])]
-            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path'])
+            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path', 'hull'])
             const bound = !!part.bound
             const asym = a.asym(part.asym || 'source', `${name}.asym`)
 
