@@ -3,36 +3,35 @@
 **Feature Branch**: `001-ergogen-currently-uses`  
 **Created**: 2025-09-08 
 **Status**: Draft  
-**Input**: User description: "Ergogen currently uses maker.js to generate STL, JSCAD Script and CAG, I want the ability to generate both STEP and STL files, potentially using other libraries (to be researched). It should be possible to reuse existing or provided STEP files."
+**Input**: User description: "ergogen exports 'cases' in STL or OpenJSCAD JS files. I want it to generate STEP files."
 
 ---
 
 ## User Scenarios & Testing *(mandatory)*
 
 ### Primary User Story
-As a keyboard designer, I want to export my designs to STEP and STL formats so that I can use them in 3D modeling software and for 3D printing. I also want to be able to incorporate existing STEP files into my designs.
+As a keyboard designer, I want to export my case designs to the STEP format so that I can use them in 3D modeling and CAD software.
 
 ### Acceptance Scenarios
-1. **Given** a valid Ergogen design, **When** I choose to export, **Then** I should have the option to select STEP or STL as an output format.
-2. **Given** a valid Ergogen design, **When** I export to STL, **Then** a valid STL file is generated that can be opened in a 3D viewer.
-3. **Given** a valid Ergogen design, **When** I export to STEP, **Then** a valid STEP file is generated that can be opened in a CAD program.
-4. **Given** an existing STEP file, **When** I specify it in my Ergogen configuration, **Then** it should be included in the final design output.
+1. **Given** a valid Ergogen design with a case, **When** I choose to export, **Then** I should have the option to select STEP as an output format for the case.
+2. **Given** a valid Ergogen design with a case, **When** I export the case to STEP, **Then** a valid STEP file is generated that can be opened in a CAD program.
+3. **Given** an existing STEP file, **When** I specify it in my Ergogen configuration, **Then** it should be possible to incorporate it into my design. [NEEDS CLARIFICATION: How should existing STEP files be incorporated? As footprints, or something else?]
 
 ### Edge Cases
-- What happens when the design is invalid or incomplete?
-- How does the system handle very large or complex designs?
-- What happens if an external library for conversion is not available?
+- What happens when the design is invalid or has no case?
+- How does the system handle very large or complex case designs?
+- What happens if an external library for STEP conversion is not available?
 - What happens if a provided STEP file is invalid or corrupted?
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
-- **FR-001**: The system MUST provide an option to export designs in STL format.
-- **FR-002**: The system MUST provide an option to export designs in STEP format.
+- **FR-001**: The system MUST provide an option to export cases in STEP format.
+- **FR-002**: The system MUST generate valid and standards-compliant STEP files for cases.
 - **FR-003**: The system MUST allow users to include one or more existing STEP files in their design.
-- **FR-004**: The system MUST generate valid and standards-compliant STL and STEP files.
-- **FR-005**: [NEEDS CLARIFICATION: What libraries should be researched or preferred for STEP/STL generation?]
-- **FR-006**: [NEEDS CLARIFICATION: How should the user specify the path to existing STEP files in the configuration?]
+- **FR-004**: [NEEDS CLARIFICATION: What libraries should be researched or preferred for STEP generation?]
+- **FR-005**: [NEEDS CLARIFICATION: How should the user specify the path to existing STEP files in the configuration?]
+- **FR-006**: The system should continue to support exporting cases in STL and OpenJSCAD formats.
 
 ---
 
