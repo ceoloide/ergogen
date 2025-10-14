@@ -1,0 +1,35 @@
+points:
+  zones:
+    matrix:
+      columns:
+        c1:
+        c2:
+  mirror: 50
+outlines:
+  test:
+    - what: path
+      where: /c1/
+      segments:
+        - type: line
+          points:
+            - shift: [0,0]
+            - shift: [10,0]
+            - shift: [0,10]
+        - type: arc
+          points:
+            - shift: [-5,0]
+            - shift: [-15,-30]
+        - type: bezier
+          points:
+            - shift: [5,0]
+            - shift: [5,20]
+    - what: rectangle
+      where: /c2/
+      size: [18,20]
+    - what: rectangle
+      size: [44,20]
+      where:
+        aggregate:
+          parts:
+            - matrix_c1
+            - mirror_matrix_c1
