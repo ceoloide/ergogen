@@ -48,8 +48,7 @@ Until there's a proper "Getting started" guide, try getting acquainted with **Er
     
 2. Try one of the web-based deployments.
 
-    [![Button Official]][WebUI]   
-    [![Button Unofficial]][Unofficial]
+    [![Button Official]][WebUI]
    
     The unofficial deployment is probably better, tbh, and will soon be replacing the official one.
     Choose either one, then click things, look at outputs and see if things start to make sense.
@@ -104,7 +103,6 @@ But even huger thanks are due to the following, *distinguished* sponsors:
 <!--------------------------------{ Buttons }---------------------------------->
 
 [Button WebUI]: https://img.shields.io/badge/Deployment-37a779?style=for-the-badge&logoColor=white&logo=AppleArcade
-[Button Unofficial]: https://img.shields.io/badge/Unofficial-yellow?style=for-the-badge
 [Button Official]: https://img.shields.io/badge/Official-37a779?style=for-the-badge
 [Button Documentation]: https://img.shields.io/badge/Documentation-1793D1?style=for-the-badge&logoColor=white&logo=GitBook
 [Button Discord]: https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logoColor=white&logo=Discord
