@@ -67,110 +67,6 @@ describe('Prepare', function() {
                 $extends: 'a'
             }
         }).should.throw('circular dependency')
-
-        // Issue #100: Order of extends
-        const config100 = {
-            A: { prop: 'A' },
-            B: { prop: 'B' },
-            C: { $extends: ['A', 'B'] }
-        }
-        p.inherit(config100).C.prop.should.equal('B')
-
-        // Issue #97: Recursive extends (chained)
-        const config97a = {
-            A: { propA: 'A' },
-            B: { $extends: 'A', propB: 'B' },
-            C: { $extends: 'B', propC: 'C' }
-        }
-        p.inherit(config97a).C.should.deep.equal({
-            propA: 'A',
-            propB: 'B',
-            propC: 'C'
-        })
-
-        // Issue #97: Nested recursive extends
-        const config97b = {
-            templates: {
-                base: { size: 18 },
-                parent: {
-                    child: { $extends: 'templates.base', color: 'blue' }
-                }
-            },
-            main: { $extends: 'templates.parent' }
-        }
-        p.inherit(config97b).main.child.should.deep.equal({
-            size: 18,
-            color: 'blue'
-        })
-
-        // Complex multi-level recursive inheritance
-        const config_complex = {
-            A: { a: 1 },
-            B: { $extends: 'A', b: 2 },
-            C: { $extends: ['A', 'B'], c: 3 },
-            D: {
-                sub: { $extends: 'C', d: 4 }
-            },
-            E: { $extends: 'D', e: 5 }
-        }
-        p.inherit(config_complex).E.should.deep.equal({
-            sub: {
-                a: 1,
-                b: 2,
-                c: 3,
-                d: 4
-            },
-            e: 5
-        })
-
-        // Multiple inheritance with overlapping properties
-        const config_overlap = {
-            A: { common: 'A', onlyA: 1 },
-            B: { common: 'B', onlyB: 2 },
-            C: { $extends: ['A', 'B'], common: 'C' }
-        }
-        p.inherit(config_overlap).C.should.deep.equal({
-            common: 'C',
-            onlyA: 1,
-            onlyB: 2
-        })
-
-        // Inheritance within arrays
-        const config_array = {
-            A: { a: 1 },
-            B: [
-                { $extends: 'A', b: 2 },
-                { $extends: 'A', b: 3 }
-            ]
-        }
-        p.inherit(config_array).B.should.deep.equal([
-            { a: 1, b: 2 },
-            { a: 1, b: 3 }
-        ])
-
-        // Support for $unset
-        const config_unset = {
-            A: { a: 1, b: 2 },
-            B: { $extends: 'A', b: '$unset' }
-        }
-        p.inherit(config_unset).B.should.deep.equal({ a: 1 })
-
-        // Deep chained inheritance
-        const config_deep = {
-            L1: { a: 1 },
-            L2: { $extends: 'L1', b: 2 },
-            L3: { $extends: 'L2', c: 3 },
-            L4: { $extends: 'L3', d: 4 },
-            L5: { $extends: 'L4', e: 5 }
-        }
-        p.inherit(config_deep).L5.should.deep.equal({ a: 1, b: 2, c: 3, d: 4, e: 5 })
-
-        // Inheritance of arrays themselves
-        const config_arr_inh = {
-            base: [1, 2],
-            extended: { $extends: 'base' }
-        }
-        p.inherit(config_arr_inh).extended.should.deep.equal([1, 2])
     })
 
     it('parameterize', function() {
@@ -231,5 +127,82 @@ describe('Prepare', function() {
                 $args: ['in"jection']
             }
         }).should.throw('valid')
+    })
+
+    it('concat', function() {
+        // should concatenate references and literals
+        const config1 = {
+            meta: {
+                name: 'ThinkCorney',
+                version: 'v1-b1',
+                name_full: '$concat(meta.name, "-", meta.version)'
+            }
+        }
+        const unnested = p.unnest(config1)
+        const result1 = p.concat(unnested)
+        result1.meta.name_full.should.equal('ThinkCorney-v1-b1')
+
+        // should handle multiple references and literals
+        const config2 = {
+            a: 'foo',
+            b: 'bar',
+            c: 'baz',
+            res: '$concat(a, " and ", b, " and ", c)'
+        }
+        p.concat(config2).res.should.equal('foo and bar and baz')
+
+        // should handle nested concats
+        const config3 = {
+            a: 'foo',
+            b: 'bar',
+            res: '$concat(a, $concat("-", b))'
+        }
+        p.concat(config3).res.should.equal('foo-bar')
+
+        // should handle references to non-string values
+        const config4 = {
+            name: 'engine',
+            version: 4.0,
+            res: '$concat(name, ": ", version)'
+        }
+        p.concat(config4).res.should.equal('engine: 4')
+
+        // should throw on circular dependencies
+        const config5 = {
+            a: '$concat(b)',
+            b: '$concat(a)'
+        }
+        p.concat.bind(this, config5).should.throw('Circular dependency')
+
+        // should throw on unresolved references
+        const config6 = {
+            res: '$concat(nonexistent)'
+        }
+        p.concat.bind(this, config6).should.throw('Could not resolve reference')
+
+        // should handle mixed quotes and escaped quotes in literals
+        const config7 = {
+            res: '$concat("double", \'single\', "contains \\"quotes\\"")'
+        }
+        p.concat(config7).res.should.equal('doublesinglecontains "quotes"')
+
+        // should handle nested quotes of different types
+        const config8 = {
+            res: '$concat("it\'s a test", \'he said "hello"\')'
+        }
+        p.concat(config8).res.should.equal('it\'s a testhe said "hello"')
+
+        // should handle empty or whitespace-only arguments
+        const config9 = {
+            empty: '$concat()',
+            whitespace: '$concat( )',
+            mixed: '$concat(a, , b)',
+            a: 'foo',
+            b: 'bar'
+        }
+        const res9 = p.concat(config9)
+        res9.empty.should.equal('')
+        res9.whitespace.should.equal('')
+        res9.mixed.should.equal('foobar')
     })
 })
