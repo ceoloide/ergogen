@@ -67,6 +67,61 @@ describe('Prepare', function() {
                 $extends: 'a'
             }
         }).should.throw('circular dependency')
+
+        // Issue #100: Order of extends
+        const config100 = {
+            A: { prop: 'A' },
+            B: { prop: 'B' },
+            C: { $extends: ['A', 'B'] }
+        }
+        p.inherit(config100).C.prop.should.equal('B')
+
+        // Issue #97: Recursive extends (chained)
+        const config97a = {
+            A: { propA: 'A' },
+            B: { $extends: 'A', propB: 'B' },
+            C: { $extends: 'B', propC: 'C' }
+        }
+        p.inherit(config97a).C.should.deep.equal({
+            propA: 'A',
+            propB: 'B',
+            propC: 'C'
+        })
+
+        // Issue #97: Nested recursive extends
+        const config97b = {
+            templates: {
+                base: { size: 18 },
+                parent: {
+                    child: { $extends: 'templates.base', color: 'blue' }
+                }
+            },
+            main: { $extends: 'templates.parent' }
+        }
+        p.inherit(config97b).main.child.should.deep.equal({
+            size: 18,
+            color: 'blue'
+        })
+
+        // Complex multi-level recursive inheritance
+        const config_complex = {
+            A: { a: 1 },
+            B: { $extends: 'A', b: 2 },
+            C: { $extends: ['A', 'B'], c: 3 },
+            D: {
+                sub: { $extends: 'C', d: 4 }
+            },
+            E: { $extends: 'D', e: 5 }
+        }
+        p.inherit(config_complex).E.should.deep.equal({
+            sub: {
+                a: 1,
+                b: 2,
+                c: 3,
+                d: 4
+            },
+            e: 5
+        })
     })
 
     it('parameterize', function() {
