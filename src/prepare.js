@@ -173,3 +173,69 @@ exports.parameterize = config => traverse(config, config, [], (target, key, val,
     delete val.$args
     target[key] = val
 })
+
+const parseArgs = (inner) => {
+    const args = []
+    let current = ''
+    let depth = 0
+    let inQuote = false
+    let quoteChar = ''
+
+    for (let i = 0; i < inner.length; i++) {
+        const char = inner[i]
+        if (inQuote) {
+            current += char
+            if (char === quoteChar && inner[i - 1] !== '\\') {
+                inQuote = false
+            }
+        } else {
+            if (char === "'" || char === '"') {
+                inQuote = true
+                quoteChar = char
+                current += char
+            } else if (char === '(') {
+                depth++
+                current += char
+            } else if (char === ')') {
+                depth--
+                current += char
+            } else if (char === ',' && depth === 0) {
+                args.push(current.trim())
+                current = ''
+            } else {
+                current += char
+            }
+        }
+    }
+    args.push(current.trim())
+    return args
+}
+
+const resolve = (val, root, breadcrumbs, seen = []) => {
+    if (typeof val !== 'string' || !val.startsWith('$concat(') || !val.endsWith(')')) return val
+
+    a.assert(!seen.includes(val), `"${breadcrumbs.join('.')}" Circular dependency!`)
+    seen.push(val)
+
+    const inner = val.substring(8, val.length - 1)
+    const args = parseArgs(inner)
+    let res = ''
+    for (const arg of args) {
+        if (!arg) continue
+        if ((arg.startsWith("'") && arg.endsWith("'")) || (arg.startsWith('"') && arg.endsWith('"'))) {
+            res += arg.substring(1, arg.length - 1).replace(/\\'/g, "'").replace(/\\"/g, '"')
+        } else if (arg.startsWith('$concat(')) {
+            res += resolve(arg, root, breadcrumbs, seen)
+        } else {
+            const ref = u.deep(root, arg)
+            a.assert(ref !== undefined, `"${arg}" (referenced in $concat at "${breadcrumbs.join('.')}") Could not resolve reference!`)
+            res += resolve(ref, root, arg.split('.'), seen)
+        }
+    }
+    seen.pop()
+    return res
+}
+
+exports.concat = config => traverse(config, config, [], (target, key, val, root, breadcrumbs) => {
+    target[key] = resolve(val, root, breadcrumbs)
+})
