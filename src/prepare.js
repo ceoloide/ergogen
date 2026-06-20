@@ -67,14 +67,15 @@ exports.inherit = config => {
     const stack = []
 
     const resolve = (val, breadcrumbs) => {
-        if (a.type(val)() !== 'object' && a.type(val)() !== 'array') return val
+        const type = a.type(val)()
+        if (type !== 'object' && type !== 'array') return val
         if (cache.has(val)) return cache.get(val)
 
         a.assert(!stack.includes(val), `"${breadcrumbs.join('.')}" leads to a circular dependency!`)
 
         stack.push(val)
         let res
-        if (a.type(val)() === 'object') {
+        if (type === 'object') {
             let current = val
             if (val.$extends !== undefined) {
                 let candidates = val.$extends
@@ -87,13 +88,28 @@ exports.inherit = config => {
                 }
                 const own = u.deepcopy(val)
                 delete own.$extends
-                list.push(own)
-                current = extend.apply(null, list)
+
+                if (list.length === 1 && Object.keys(own).length === 0) {
+                    current = list[0]
+                } else {
+                    list.push(own)
+                    current = extend.apply(null, list)
+                }
             }
 
-            res = {}
-            for (const [k, v] of Object.entries(current)) {
-                res[k] = resolve(v, [...breadcrumbs, k])
+            const current_type = a.type(current)()
+            if (current_type === 'object') {
+                res = {}
+                for (const [k, v] of Object.entries(current)) {
+                    res[k] = resolve(v, [...breadcrumbs, k])
+                }
+            } else if (current_type === 'array') {
+                res = []
+                for (let i = 0; i < current.length; i++) {
+                    res[i] = resolve(current[i], [...breadcrumbs, `[${i}]`])
+                }
+            } else {
+                res = current
             }
         } else { // array
             res = []

@@ -122,6 +122,55 @@ describe('Prepare', function() {
             },
             e: 5
         })
+
+        // Multiple inheritance with overlapping properties
+        const config_overlap = {
+            A: { common: 'A', onlyA: 1 },
+            B: { common: 'B', onlyB: 2 },
+            C: { $extends: ['A', 'B'], common: 'C' }
+        }
+        p.inherit(config_overlap).C.should.deep.equal({
+            common: 'C',
+            onlyA: 1,
+            onlyB: 2
+        })
+
+        // Inheritance within arrays
+        const config_array = {
+            A: { a: 1 },
+            B: [
+                { $extends: 'A', b: 2 },
+                { $extends: 'A', b: 3 }
+            ]
+        }
+        p.inherit(config_array).B.should.deep.equal([
+            { a: 1, b: 2 },
+            { a: 1, b: 3 }
+        ])
+
+        // Support for $unset
+        const config_unset = {
+            A: { a: 1, b: 2 },
+            B: { $extends: 'A', b: '$unset' }
+        }
+        p.inherit(config_unset).B.should.deep.equal({ a: 1 })
+
+        // Deep chained inheritance
+        const config_deep = {
+            L1: { a: 1 },
+            L2: { $extends: 'L1', b: 2 },
+            L3: { $extends: 'L2', c: 3 },
+            L4: { $extends: 'L3', d: 4 },
+            L5: { $extends: 'L4', e: 5 }
+        }
+        p.inherit(config_deep).L5.should.deep.equal({ a: 1, b: 2, c: 3, d: 4, e: 5 })
+
+        // Inheritance of arrays themselves
+        const config_arr_inh = {
+            base: [1, 2],
+            extended: { $extends: 'base' }
+        }
+        p.inherit(config_arr_inh).extended.should.deep.equal([1, 2])
     })
 
     it('parameterize', function() {
