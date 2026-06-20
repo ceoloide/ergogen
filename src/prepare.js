@@ -131,3 +131,194 @@ exports.parameterize = config => traverse(config, config, [], (target, key, val,
     delete val.$args
     target[key] = val
 })
+
+exports.migrate = (config, logger = () => {}) => {
+    let migrated = false
+
+    // 1. Version-based detection
+    if (config.meta && config.meta.engine) {
+        const version = config.meta.engine
+        try {
+            const semver = u.semver(version)
+            const threshold = u.semver('3.1.2')
+
+            // If it's explicitly v3 or older, we migrate
+            if (u.satisfies(threshold, semver)) {
+                migrated = true
+            }
+        } catch (e) {
+            // If semver parsing fails, we'll fall back to heuristics
+        }
+    }
+
+    // 2. Heuristic-based detection (if version is not conclusive)
+    if (!migrated) {
+        const has_v3_points = () => {
+             if (config.points && config.points.zones && a.type(config.points.zones)() == 'object') {
+                for (const zone of Object.values(config.points.zones)) {
+                    if (zone && zone.columns && a.type(zone.columns)() == 'object') {
+                        for (const [col_name, col] of Object.entries(zone.columns)) {
+                            if (col_name.includes('.')) continue
+                            if (col && a.type(col)() == 'object') {
+                                if (col.row_overrides !== undefined) return true
+                                const to_move = ['stagger', 'spread', 'rotate', 'origin']
+                                for (const attr of to_move) {
+                                    if (col[attr] !== undefined) return true
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return false
+        }
+
+        const has_v3_parts = (obj) => {
+            if (obj && a.type(obj)() == 'object') {
+                for (const entry of Object.values(obj)) {
+                    const parts = Array.isArray(entry) ? entry : (a.type(entry)() == 'object' ? Object.values(entry) : [])
+                    for (const part of parts) {
+                        if (part && a.type(part)() == 'object') {
+                            if (part.type !== undefined && part.what === undefined) return true
+                        }
+                    }
+                }
+            }
+            return false
+        }
+
+        if (has_v3_points() || has_v3_parts(config.outlines) || has_v3_parts(config.cases)) {
+            migrated = true
+        }
+
+        if (!migrated && config.pcbs && a.type(config.pcbs)() == 'object') {
+             for (const pcb of Object.values(config.pcbs)) {
+                if (pcb && pcb.footprints && a.type(pcb.footprints)() == 'object') {
+                    for (const fp of Object.values(pcb.footprints)) {
+                        if (fp && a.type(fp)() == 'object') {
+                            if (fp.type !== undefined && fp.what === undefined) {
+                                migrated = true
+                                break
+                            }
+                            const to_merge = ['anchor', 'nets', 'anchors']
+                            for (const m of to_merge) {
+                                if (fp[m] !== undefined) {
+                                    migrated = true
+                                    break
+                                }
+                            }
+                        }
+                        if (migrated) break
+                    }
+                }
+                if (migrated) break
+            }
+        }
+    }
+
+    if (!migrated) return config
+
+    logger('Ergogen v3 engine syntax detected, auto-updating...')
+    logger('Suggest to enable debug to look at the canonical.yaml to see the result of the auto update.')
+
+    // Perform migration
+    const res = u.deepcopy(config)
+
+    // points
+    if (res.points && res.points.zones && a.type(res.points.zones)() == 'object') {
+        for (const zone of Object.values(res.points.zones)) {
+            if (zone && zone.columns && a.type(zone.columns)() == 'object') {
+                for (const [col_name, col] of Object.entries(zone.columns)) {
+                    if (col_name.includes('.')) continue
+                    if (col && a.type(col)() == 'object') {
+                        // move col-level attributes to key-level
+                        const mapping = {
+                            stagger: 'stagger',
+                            spread: 'spread',
+                            rotate: 'splay',
+                            origin: 'origin'
+                        }
+                        for (const [old_attr, new_attr] of Object.entries(mapping)) {
+                            if (col[old_attr] !== undefined) {
+                                col.key = col.key || {}
+                                if (a.type(col.key)() == 'object' && col.key[new_attr] === undefined) {
+                                    col.key[new_attr] = col[old_attr]
+                                }
+                                delete col[old_attr]
+                            }
+                        }
+                        // rename row_overrides to rows
+                        if (col.row_overrides !== undefined) {
+                            col.rows = col.row_overrides
+                            delete col.row_overrides
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // outlines
+    if (res.outlines && a.type(res.outlines)() == 'object') {
+        for (const outline of Object.values(res.outlines)) {
+            const parts = Array.isArray(outline) ? outline : (a.type(outline)() == 'object' ? Object.values(outline) : [])
+            for (const part of parts) {
+                if (part && a.type(part)() == 'object') {
+                    if (part.type !== undefined && part.what === undefined) {
+                        part.what = part.type
+                        delete part.type
+                    }
+                }
+            }
+        }
+    }
+
+    // cases
+    if (res.cases && a.type(res.cases)() == 'object') {
+        for (const casing of Object.values(res.cases)) {
+            const parts = Array.isArray(casing) ? casing : (a.type(casing)() == 'object' ? Object.values(casing) : [])
+            for (const part of parts) {
+                if (part && a.type(part)() == 'object') {
+                    if (part.type !== undefined && part.what === undefined) {
+                        part.what = part.type
+                        delete part.type
+                    }
+                }
+            }
+        }
+    }
+
+    // pcbs
+    if (res.pcbs && a.type(res.pcbs)() == 'object') {
+        for (const pcb of Object.values(res.pcbs)) {
+            if (pcb && pcb.footprints && a.type(pcb.footprints)() == 'object') {
+                for (const fp of Object.values(pcb.footprints)) {
+                    if (fp && a.type(fp)() == 'object') {
+                        if (fp.type !== undefined && fp.what === undefined) {
+                            fp.what = fp.type
+                            delete fp.type
+                        }
+                        // merge anchor, nets, anchors into params
+                        const to_merge = ['anchor', 'nets', 'anchors']
+                        for (const m of to_merge) {
+                            if (fp[m] !== undefined) {
+                                fp.params = fp.params || {}
+                                if (a.type(fp.params)() == 'object' && fp.params[m] === undefined) {
+                                    fp.params[m] = fp[m]
+                                }
+                                delete fp[m]
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ALWAYS include meta.engine: <current version>
+    const package_json = require('../package.json')
+    res.meta = res.meta || {}
+    res.meta.engine = package_json.version
+
+    return res
+}

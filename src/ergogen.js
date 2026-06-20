@@ -24,6 +24,7 @@ const process = async (raw, options={}, logger=()=>{}) => {
     }
     logger(prefix + suffix)
     
+    config = prepare.migrate(config, logger)
     logger('Preprocessing input...')
     config = prepare.unnest(config)
     config = prepare.inherit(config)
