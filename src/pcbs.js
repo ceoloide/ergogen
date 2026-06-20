@@ -113,7 +113,8 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
             parsed_params[param_name] = net_obj(net, index)
         } else { // anchor
             let parsed_anchor = anchor(value, `${name}.params.${param_name}`, points, point)(units)
-            parsed_anchor.y = -parsed_anchor.y // kicad mirror, as per usual
+            parsed_anchor.x += extra.offset.x
+            parsed_anchor.y = -parsed_anchor.y + extra.offset.y
             parsed_params[param_name] = parsed_anchor
         }
     }
@@ -124,12 +125,12 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
 
     // footprint positioning
     parsed_params.point = point
-    parsed_params.x = point.x
-    parsed_params.y = -point.y
+    parsed_params.x = point.x + extra.offset.x
+    parsed_params.y = -point.y + extra.offset.y
     parsed_params.r = point.r
     parsed_params.rot = point.r // to be deprecated
-    parsed_params.xy = `${point.x} ${-point.y}`
-    parsed_params.at = `(at ${point.x} ${-point.y} ${point.r})`
+    parsed_params.xy = `${parsed_params.x} ${parsed_params.y}`
+    parsed_params.at = `(at ${parsed_params.x} ${parsed_params.y} ${point.r})`
 
     const internal_xyfunc = (x, y, resist) => {
         const sign = resist ? 1 : (point.meta.mirrored ? -1 : 1)
@@ -143,7 +144,7 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
             shift: [x, -y],
             resist: resist
         }, '_internal_footprint_xy', points, point)(units)
-        return xy_obj(new_anchor.x, -new_anchor.y)
+        return xy_obj(new_anchor.x + extra.offset.x, -new_anchor.y + extra.offset.y)
     }
     parsed_params.esxy = (x, y) => external_xyfunc(x, y, false)
     parsed_params.eaxy = (x, y) => external_xyfunc(x, y, true)
@@ -166,8 +167,9 @@ exports.parse = (config, points, outlines, units) => {
     for (const [pcb_name, pcb_config] of Object.entries(pcbs)) {
 
         // config sanitization
-        a.unexpected(pcb_config, `pcbs.${pcb_name}`, ['outlines', 'footprints', 'references', 'template', 'params'])
+        a.unexpected(pcb_config, `pcbs.${pcb_name}`, ['outlines', 'footprints', 'references', 'template', 'params', 'alignment'])
         const references = a.sane(pcb_config.references || false, `pcbs.${pcb_name}.references`, 'boolean')()
+        const alignment = a.in(pcb_config.alignment || 'origin', `pcbs.${pcb_name}.alignment`, ['origin', 'center'])
         const template = template_types[a.in(pcb_config.template || 'kicad5', `pcbs.${pcb_name}.template`, Object.keys(template_types))]
 
         // outline conversion
@@ -175,11 +177,34 @@ exports.parse = (config, points, outlines, units) => {
             pcb_config.outlines = {...pcb_config.outlines}
         }
         const config_outlines = a.sane(pcb_config.outlines || {}, `pcbs.${pcb_name}.outlines`, 'object')()
+
+        // offset calculation
+        const offset = {x: 0, y: 0}
+        if (alignment == 'center') {
+            const board_model = {models: {}}
+            for (const [outline_name, outline] of Object.entries(config_outlines)) {
+                const ref = a.in(outline.outline, `pcbs.${pcb_name}.outlines.${outline_name}.outline`, Object.keys(outlines))
+                board_model.models[outline_name] = outlines[ref]
+            }
+            // if there are no outlines, we use the points
+            if (Object.keys(board_model.models).length == 0) {
+                board_model.models.points = {paths: {}}
+                for (const [point_name, point] of Object.entries(points)) {
+                    board_model.models.points.paths[point_name] = new m.paths.Circle([point.x, point.y], 0.1)
+                }
+            }
+            const bbox = m.measure.modelExtents(board_model)
+            const center_x = (bbox.low[0] + bbox.high[0]) / 2
+            const center_y = (bbox.low[1] + bbox.high[1]) / 2
+            offset.x = 148.5 - center_x
+            offset.y = 105 + center_y
+        }
+
         const kicad_outlines = {}
         for (const [outline_name, outline] of Object.entries(config_outlines)) {
             const ref = a.in(outline.outline, `pcbs.${pcb_name}.outlines.${outline_name}.outline`, Object.keys(outlines))
             const layer = a.sane(outline.layer || 'Edge.Cuts', `pcbs.${pcb_name}.outlines.${outline_name}.outline`, 'string')()
-            kicad_outlines[outline_name] = template.convert_outline(outlines[ref], layer)
+            kicad_outlines[outline_name] = template.convert_outline(outlines[ref], layer, offset)
         }
 
         // making a global net index registry
@@ -200,7 +225,7 @@ exports.parse = (config, points, outlines, units) => {
         }
 
         const footprints = []
-        const footprint_factory = footprint(points, net_indexer, component_indexer, units, {references})
+        const footprint_factory = footprint(points, net_indexer, component_indexer, units, {references, offset})
 
         // generate footprints
         if (a.type(pcb_config.footprints)() == 'array') {

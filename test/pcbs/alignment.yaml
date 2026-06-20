@@ -1,0 +1,23 @@
+points:
+  zones:
+    main:
+      key:
+        padding: 19
+      columns:
+        col1:
+        col2:
+      rows:
+        row1:
+outlines:
+  board:
+    - what: rectangle
+      where:
+        - ref: main_col1_row1
+        - ref: main_col2_row1
+      size: [40, 20]
+pcbs:
+  centered:
+    outlines:
+      main:
+        outline: board
+    alignment: center
