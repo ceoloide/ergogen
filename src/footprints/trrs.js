@@ -34,6 +34,7 @@
 //      pins 1 and 2 must be identical if symmetric is true, as they will overlap
 
 module.exports = {
+  engine: '4.2.1',
   params: {
     designator: 'TRRS',
     reverse: false,

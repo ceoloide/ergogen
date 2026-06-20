@@ -80,7 +80,7 @@ const process = async (raw, options={}, logger=()=>{}) => {
     }
 
     logger('Scaffolding PCBs...')
-    const pcbs = pcbs_lib.parse(config, points, outlines, units)
+    const pcbs = pcbs_lib.parse(config, points, outlines, units, logger)
     results.pcbs = {}
     for (const [pcb_name, pcb_text] of Object.entries(pcbs)) {
         if (!debug && pcb_name.startsWith('_')) continue

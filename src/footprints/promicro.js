@@ -5,6 +5,7 @@
 //    if up, power led will face away from pcb
 
 module.exports = {
+  engine: '4.2.1',
   params: {
     designator: 'MCU',
     orientation: 'down',

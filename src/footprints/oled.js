@@ -1,5 +1,6 @@
 module.exports = {
-    params: {
+    engine: '4.2.1',
+  params: {
         designator: 'OLED',
         side: 'F',
         VCC: {type: 'net', value: 'VCC'},

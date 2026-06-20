@@ -1,3 +1,4 @@
+const { version } = require('../package.json')
 const m = require('makerjs')
 const yaml = require('js-yaml')
 
@@ -36,12 +37,26 @@ const net_obj = (name, index) => {
     }
 }
 
-const footprint = exports._footprint = (points, net_indexer, component_indexer, units, extra) => (config, name, point) => {
+const footprint = exports._footprint = (points, net_indexer, component_indexer, units, extra, logger, warned) => (config, name, point) => {
 
     // config sanitization
     a.unexpected(config, name, ['what', 'params'])
     const what = a.in(config.what, `${name}.what`, Object.keys(footprint_types))
     const fp = footprint_types[what]
+
+    if (warned && !warned.has(what)) {
+        let engine = fp.engine
+        if (!engine) {
+            if (logger) logger(`Footprint "${what}" does not specify an "engine" version. Assuming 4.2.1. Please update the footprint to include the "engine" property.`)
+            engine = "4.2.1"
+        }
+        const semver_engine = u.semver(engine, `footprint "${what}" engine`)
+        if (!u.satisfies(version, semver_engine)) {
+            throw new Error(`Current ergogen version (${version}) doesn't satisfy footprint "${what}"'s engine requirement (${engine})!`)
+        }
+        warned.add(what)
+    }
+
     const original_params = config.params || {}
 
     // param sanitization
@@ -158,7 +173,7 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
     return fp.body(parsed_params)
 }
 
-exports.parse = (config, points, outlines, units) => {
+exports.parse = (config, points, outlines, units, logger) => {
 
     const pcbs = a.sane(config.pcbs || {}, 'pcbs', 'object')()
     const results = {}
@@ -200,7 +215,8 @@ exports.parse = (config, points, outlines, units) => {
         }
 
         const footprints = []
-        const footprint_factory = footprint(points, net_indexer, component_indexer, units, {references})
+        const warned = new Set()
+        const footprint_factory = footprint(points, net_indexer, component_indexer, units, {references}, logger, warned)
 
         // generate footprints
         if (a.type(pcb_config.footprints)() == 'array') {
