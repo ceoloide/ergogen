@@ -1,5 +1,6 @@
 module.exports = {
-    params: {
+    engine: '4.1.2',
+  params: {
         designator: 'PAD',
         width: 1,
         height: 1,

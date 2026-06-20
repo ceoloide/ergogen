@@ -13,6 +13,7 @@
 // note: hotswap and reverse can be used simultaneously
 
 module.exports = {
+  engine: '4.1.2',
   params: {
     designator: 'S',
     hotswap: false,

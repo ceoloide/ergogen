@@ -11,7 +11,7 @@
     "bin": "./src/cli.js",
     "scripts": {
         "build": "rollup -c",
-        "test": "mocha -r test/helpers/register test/index.js",
+        "test": "mocha -r test/helpers/register.js test/index.js",
         "coverage": "nyc --reporter=html --reporter=text npm test"
     },
     "dependencies": {

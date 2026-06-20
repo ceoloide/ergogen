@@ -9,7 +9,8 @@
 //      if true, will add choc sized keycap box around the footprint
 
 module.exports = {
-    params: {
+    engine: '4.1.2',
+  params: {
       designator: 'S',
 		  side: 'F',
 		  reverse: false,

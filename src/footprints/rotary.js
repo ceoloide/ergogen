@@ -8,7 +8,8 @@
 //    C: corresponds to pin 3 (for rotary)
 
 module.exports = {
-    params: {
+    engine: '4.1.2',
+  params: {
         designator: 'ROT',
         from: undefined,
         to: undefined,
