@@ -214,18 +214,34 @@ const perform_mirror = exports._perform_mirror = (point, axis, units) => {
     mp.meta.colrow = `mirror_${mp.meta.colrow}`
     mp.meta.mirrored = true
 
+    // templating support
+    for (const [k, v] of Object.entries(mp.meta)) {
+        if (a.type(v)(units) == 'string') {
+            mp.meta[k] = u.template(v, mp.meta)
+        }
+    }
+
     // Re-sanitize overridden properties
-    if (mirror_config.width !== undefined) {
-        mp.meta.width = a.sane(mp.meta.width, `${mp.meta.name}.width`, 'number')(units)
-    }
-    if (mirror_config.height !== undefined) {
-        mp.meta.height = a.sane(mp.meta.height, `${mp.meta.name}.height`, 'number')(units)
-    }
+    mp.meta.stagger = a.sane(mp.meta.stagger, `${mp.meta.name}.stagger`, 'number')(units)
+    mp.meta.spread = a.sane(mp.meta.spread, `${mp.meta.name}.spread`, 'number')(units)
+    mp.meta.splay = a.sane(mp.meta.splay, `${mp.meta.name}.splay`, 'number')(units)
+    mp.meta.origin = a.xy(mp.meta.origin, `${mp.meta.name}.origin`)(units)
+    mp.meta.orient = a.sane(mp.meta.orient, `${mp.meta.name}.orient`, 'number')(units)
+    mp.meta.shift = a.xy(mp.meta.shift, `${mp.meta.name}.shift`)(units)
+    mp.meta.rotate = a.sane(mp.meta.rotate, `${mp.meta.name}.rotate`, 'number')(units)
+    mp.meta.width = a.sane(mp.meta.width, `${mp.meta.name}.width`, 'number')(units)
+    mp.meta.height = a.sane(mp.meta.height, `${mp.meta.name}.height`, 'number')(units)
+    mp.meta.padding = a.sane(mp.meta.padding, `${mp.meta.name}.padding`, 'number')(units)
+    mp.meta.skip = a.sane(mp.meta.skip, `${mp.meta.name}.skip`, 'boolean')()
+    mp.meta.asym = a.asym(mp.meta.asym, `${mp.meta.name}.asym`)
+
+    // apply independent adjustments
+    const final_mp = anchor_lib.parse(mp.meta.adjust, `${mp.meta.name}.adjust`, {}, mp)(units)
 
     if (point.meta.asym == 'clone') {
         point.meta.skip = true
     }
-    return [mirrored_name, mp]
+    return [mirrored_name, final_mp]
 }
 
 const perform_autobind = exports._perform_autobind = (points, units) => {
