@@ -180,59 +180,70 @@ const parseArgs = (inner) => {
     let depth = 0
     let inQuote = false
     let quoteChar = ''
-
     for (let i = 0; i < inner.length; i++) {
         const char = inner[i]
-        if (inQuote) {
-            current += char
-            if (char === quoteChar && inner[i - 1] !== '\\') {
-                inQuote = false
-            }
-        } else {
-            if (char === "'" || char === '"') {
+        if ((char === '"' || char === "'") && (i === 0 || inner[i-1] !== '\\')) {
+            if (!inQuote) {
                 inQuote = true
                 quoteChar = char
                 current += char
-            } else if (char === '(') {
-                depth++
+            } else if (char === quoteChar) {
+                inQuote = false
                 current += char
-            } else if (char === ')') {
-                depth--
-                current += char
-            } else if (char === ',' && depth === 0) {
-                args.push(current.trim())
-                current = ''
             } else {
                 current += char
             }
+        } else if (!inQuote && char === '(') {
+            depth++
+            current += char
+        } else if (!inQuote && char === ')') {
+            depth--
+            current += char
+        } else if (!inQuote && char === ',' && depth === 0) {
+            args.push(current.trim())
+            current = ''
+        } else {
+            current += char
         }
     }
-    args.push(current.trim())
+    if (current.trim().length > 0 || inner.length === 0) {
+        args.push(current.trim())
+    }
     return args
 }
 
-const resolve = (val, root, breadcrumbs, seen = []) => {
-    if (typeof val !== 'string' || !val.startsWith('$concat(') || !val.endsWith(')')) return val
+const resolve = (val, root, breadcrumbs, seen = new Set()) => {
+    if (a.type(val)() !== 'string') return val
+    if (!val.startsWith('$concat(') || !val.endsWith(')')) return val
 
-    a.assert(!seen.includes(val), `"${breadcrumbs.join('.')}" Circular dependency!`)
-    seen.push(val)
+    if (seen.has(val)) {
+        throw new Error(`Circular dependency detected in $concat at "${breadcrumbs.join('.')}": ${val}`)
+    }
+    seen.add(val)
 
     const inner = val.substring(8, val.length - 1)
     const args = parseArgs(inner)
-    let res = ''
-    for (const arg of args) {
-        if (!arg) continue
-        if ((arg.startsWith("'") && arg.endsWith("'")) || (arg.startsWith('"') && arg.endsWith('"'))) {
-            res += arg.substring(1, arg.length - 1).replace(/\\'/g, "'").replace(/\\"/g, '"')
-        } else if (arg.startsWith('$concat(')) {
-            res += resolve(arg, root, breadcrumbs, seen)
-        } else {
+
+    const res = args
+        .filter(arg => arg.length > 0)
+        .map(arg => {
+            // String literal
+            if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
+                return arg.substring(1, arg.length - 1).replace(/\\(.)/g, '$1')
+            }
+            // $concat call
+            if (arg.startsWith('$concat(')) {
+                return resolve(arg, root, breadcrumbs, seen)
+            }
+            // Reference
             const ref = u.deep(root, arg)
-            a.assert(ref !== undefined, `"${arg}" (referenced in $concat at "${breadcrumbs.join('.')}") Could not resolve reference!`)
-            res += resolve(ref, root, arg.split('.'), seen)
-        }
-    }
-    seen.pop()
+            if (ref === undefined) {
+                throw new Error(`Could not resolve reference "${arg}" in $concat at "${breadcrumbs.join('.')}"`)
+            }
+            return resolve(ref, root, breadcrumbs, seen)
+        }).join('')
+
+    seen.delete(val)
     return res
 }
 
