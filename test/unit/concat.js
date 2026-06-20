@@ -43,4 +43,47 @@ describe('Concat', function() {
         }
         p.concat(config).res.should.equal('engine: 4')
     })
+
+    it('should throw on circular dependencies', function() {
+        const config = {
+            a: '$concat(b)',
+            b: '$concat(a)'
+        }
+        p.concat.bind(this, config).should.throw('Circular dependency')
+    })
+
+    it('should throw on unresolved references', function() {
+        const config = {
+            res: '$concat(nonexistent)'
+        }
+        p.concat.bind(this, config).should.throw('Could not resolve reference')
+    })
+
+    it('should handle mixed quotes and escaped quotes in literals', function() {
+        const config = {
+            res: '$concat("double", \'single\', "contains \\"quotes\\"")'
+        }
+        p.concat(config).res.should.equal('doublesinglecontains "quotes"')
+    })
+
+    it('should handle nested quotes of different types', function() {
+        const config = {
+            res: '$concat("it\'s a test", \'he said "hello"\')'
+        }
+        p.concat(config).res.should.equal('it\'s a testhe said "hello"')
+    })
+
+    it('should handle empty or whitespace-only arguments', function() {
+        const config = {
+            empty: '$concat()',
+            whitespace: '$concat( )',
+            mixed: '$concat(a, , b)',
+            a: 'foo',
+            b: 'bar'
+        }
+        const res = p.concat(config)
+        res.empty.should.equal('')
+        res.whitespace.should.equal('')
+        res.mixed.should.equal('foobar')
+    })
 })

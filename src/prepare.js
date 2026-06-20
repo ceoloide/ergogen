@@ -164,7 +164,7 @@ const parseArgs = (inner) => {
             current += char
         }
     }
-    if (current.trim().length > 0) {
+    if (current.trim().length > 0 || inner.length === 0) {
         args.push(current.trim())
     }
     return args
@@ -182,22 +182,24 @@ const resolve = (val, root, breadcrumbs, seen = new Set()) => {
     const inner = val.substring(8, val.length - 1)
     const args = parseArgs(inner)
 
-    const res = args.map(arg => {
-        // String literal
-        if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
-            return arg.substring(1, arg.length - 1)
-        }
-        // $concat call
-        if (arg.startsWith('$concat(')) {
-            return resolve(arg, root, breadcrumbs, seen)
-        }
-        // Reference
-        const ref = u.deep(root, arg)
-        if (ref === undefined) {
-            throw new Error(`Could not resolve reference "${arg}" in $concat at "${breadcrumbs.join('.')}"`)
-        }
-        return resolve(ref, root, breadcrumbs, seen)
-    }).join('')
+    const res = args
+        .filter(arg => arg.length > 0)
+        .map(arg => {
+            // String literal
+            if ((arg.startsWith('"') && arg.endsWith('"')) || (arg.startsWith("'") && arg.endsWith("'"))) {
+                return arg.substring(1, arg.length - 1).replace(/\\(.)/g, '$1')
+            }
+            // $concat call
+            if (arg.startsWith('$concat(')) {
+                return resolve(arg, root, breadcrumbs, seen)
+            }
+            // Reference
+            const ref = u.deep(root, arg)
+            if (ref === undefined) {
+                throw new Error(`Could not resolve reference "${arg}" in $concat at "${breadcrumbs.join('.')}"`)
+            }
+            return resolve(ref, root, breadcrumbs, seen)
+        }).join('')
 
     seen.delete(val)
     return res
