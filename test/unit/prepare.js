@@ -172,12 +172,26 @@ describe('Prepare', function() {
         }
         p.inherit(config_arr_inh).extended.should.deep.equal([1, 2])
 
-        // Inheritance of non-object/non-array types
-        const config_primitive_inh = {
+        // Inheritance of non-object/non-array types: string
+        const config_primitive_inh_string = {
             base: 'primitive',
             extended: { $extends: 'base' }
         }
-        p.inherit(config_primitive_inh).extended.should.equal('primitive')
+        p.inherit(config_primitive_inh_string).extended.should.equal('primitive')
+
+        // Inheritance of non-object/non-array types: boolean
+        const config_primitive_inh_boolean = {
+            base: true,
+            extended: { $extends: 'base' }
+        }
+        p.inherit(config_primitive_inh_boolean).extended.should.equal(true)
+
+        // Inheritance of non-object/non-array types: number
+        const config_primitive_inh_number = {
+            base: 42,
+            extended: { $extends: 'base' }
+        }
+        p.inherit(config_primitive_inh_number).extended.should.equal(42)
     })
 
     it('parameterize', function() {
