@@ -3,9 +3,9 @@ const version = require('../../package.json').version
 
 module.exports = {
 
-    convert_outline: (model, layer) => {
+    convert_outline: (model, layer, offset={x: 0, y: 0}) => {
         const grs = []
-        const xy = val => `${val[0]} ${-val[1]}`
+        const xy = val => `${val[0] + offset.x} ${-val[1] + offset.y}`
         m.model.walk(model, {
             onPath: wp => {
                 const p = wp.pathContext
