@@ -171,6 +171,13 @@ describe('Prepare', function() {
             extended: { $extends: 'base' }
         }
         p.inherit(config_arr_inh).extended.should.deep.equal([1, 2])
+
+        // Inheritance of non-object/non-array types
+        const config_primitive_inh = {
+            base: 'primitive',
+            extended: { $extends: 'base' }
+        }
+        p.inherit(config_primitive_inh).extended.should.equal('primitive')
     })
 
     it('parameterize', function() {
