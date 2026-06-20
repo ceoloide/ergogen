@@ -47,8 +47,8 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
     if (warned && !warned.has(what)) {
         let engine = fp.engine
         if (!engine) {
-            if (logger) logger(`Footprint "${what}" does not specify an "engine" version. Assuming 4.1.2. Please update the footprint to include the "engine" property.`)
-            engine = "4.1.2"
+            if (logger) logger(`Footprint "${what}" does not specify an "engine" version. Assuming 4.2.1. Please update the footprint to include the "engine" property.`)
+            engine = "4.2.1"
         }
         const semver_engine = u.semver(engine, `footprint "${what}" engine`)
         if (!u.satisfies(version, semver_engine)) {

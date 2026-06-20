@@ -76,7 +76,7 @@ describe('Footprint Engine', function() {
         }
 
         ergogen.inject('ok_fp', {
-            engine: '4.1.2',
+            engine: '4.2.1',
             params: {},
             body: p => 'body'
         })
@@ -85,7 +85,7 @@ describe('Footprint Engine', function() {
         result.pcbs.main.should.contain('body')
     })
 
-    it('should log warning and assume 4.1.2 when engine is missing', async function() {
+    it('should log warning and assume 4.2.1 when engine is missing', async function() {
         const config = {
             points: {
                 zones: {
@@ -124,7 +124,7 @@ describe('Footprint Engine', function() {
         const logger = sinon.spy()
         await ergogen.process(config, {}, logger)
 
-        logger.calledWith('Footprint "missing_fp" does not specify an "engine" version. Assuming 4.1.2. Please update the footprint to include the "engine" property.').should.be.true
+        logger.calledWith('Footprint "missing_fp" does not specify an "engine" version. Assuming 4.2.1. Please update the footprint to include the "engine" property.').should.be.true
     })
 
     it('should only log warning once per footprint type', async function() {
@@ -163,6 +163,6 @@ describe('Footprint Engine', function() {
         const logger = sinon.spy()
         await ergogen.process(config, {}, logger)
 
-        logger.withArgs('Footprint "multi_fp" does not specify an "engine" version. Assuming 4.1.2. Please update the footprint to include the "engine" property.').calledOnce.should.be.true
+        logger.withArgs('Footprint "multi_fp" does not specify an "engine" version. Assuming 4.2.1. Please update the footprint to include the "engine" property.').calledOnce.should.be.true
     })
 })

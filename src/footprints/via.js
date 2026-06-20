@@ -3,7 +3,7 @@
 //		net: the net this via should be connected to
 
 module.exports = {
-    engine: '4.1.2',
+    engine: '4.2.1',
   params: {
       net: undefined
     },
