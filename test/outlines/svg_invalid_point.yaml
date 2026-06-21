@@ -1,0 +1,13 @@
+points:
+  zones:
+    matrix:
+      columns:
+        pos:
+          key:
+            x: 0
+            y: 0
+outlines:
+  invalid_point_type:
+    - what: svg
+      points:
+        - 123
