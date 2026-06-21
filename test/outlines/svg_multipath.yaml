@@ -2,7 +2,7 @@ points:
   zones:
     matrix:
       columns:
-        pos:
+        c1:
           key:
             x: 0
             y: 0
@@ -11,4 +11,4 @@ outlines:
     - what: svg
       path:
         - M 0 0 L 10 0 L 10 10 L 0 10 Z
-        - M 20 20 L 30 20 L 30 30 L 20 30 Z
+        - M 5 5 L 15 5 L 15 15 L 5 15 Z

@@ -66,9 +66,15 @@ exports.unpack = async (zip) => {
 
         const svg_injected = (config, name, points, outlines, units) => {
             return [() => {
-                const combined = { models: {} }
-                paths.forEach((p, i) => {
-                    combined.models['path' + i] = makerjs.importer.fromSVGPathData(p)
+                let combined = undefined
+                paths.forEach((p) => {
+                    const imported = makerjs.importer.fromSVGPathData(p)
+                    if (combined === undefined) {
+                        combined = imported
+                    } else {
+                        combined = u.union(combined, imported)
+                        makerjs.model.simplify(combined)
+                    }
                 })
                 const bbox = makerjs.measure.modelExtents(combined)
                 return [combined, {low: bbox.low, high: bbox.high}]

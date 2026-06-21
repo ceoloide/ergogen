@@ -327,11 +327,18 @@ const svg = (config, name, points, outlines, units) => {
                 a.assert(false, `Field "path" for SVG outline "${name}" must be a string or an array!`)
             }
 
-            shape = { models: {} }
+            let combined = undefined
             for (const [i, p] of paths.entries()) {
                 a.assert(a.type(p)() == 'string', `Path ${i} for SVG outline "${name}" must be a string!`)
-                shape.models['path' + i] = m.importer.fromSVGPathData(p, accuracy)
+                const imported = m.importer.fromSVGPathData(p, accuracy)
+                if (combined === undefined) {
+                    combined = imported
+                } else {
+                    combined = u.union(combined, imported)
+                    m.model.simplify(combined)
+                }
             }
+            shape = combined
         } else {
             let parsed_points = []
             if (a.type(points_raw)() == 'string') {
