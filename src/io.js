@@ -54,7 +54,7 @@ exports.unpack = async (zip) => {
     // bundled outlines
     const ots = zip.folder('outlines')
     for (const ot of ots.file(/.*\.svg$/)) {
-        const name = ot.name.slice('outlines/'.length).replace(/\.svg$/, '')
+        const name = ot.name.slice('outlines/'.length).split('.')[0]
         const text = await ot.async('string')
         // Simple SVG path extraction for now
         const paths = []
