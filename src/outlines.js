@@ -307,18 +307,31 @@ const path = (config, name, points, outlines, units) => {
 
 const svg = (config, name, points, outlines, units) => {
     a.unexpected(config, name, ['path', 'points', 'accuracy'])
-    const path = a.sane(config.path || '', `${name}.path`, 'string')(units)
+    let path_raw = config.path
     let points_raw = config.points
     const accuracy = a.sane(config.accuracy || 0.0001, `${name}.accuracy`, 'number')(units)
     a.assert(accuracy !== 0, `Accuracy for SVG outline "${name}" cannot be 0!`)
 
-    a.assert(path || points_raw, `Either "path" or "points" must be provided for SVG outline "${name}"!`)
-    a.assert(!(path && points_raw), `Both "path" and "points" cannot be provided for SVG outline "${name}"!`)
+    a.assert(path_raw || points_raw, `Either "path" or "points" must be provided for SVG outline "${name}"!`)
+    a.assert(!(path_raw && points_raw), `Both "path" and "points" cannot be provided for SVG outline "${name}"!`)
 
     return [() => {
         let shape
-        if (path) {
-            shape = m.importer.fromSVGPathData(path, accuracy)
+        if (path_raw) {
+            let paths = []
+            if (a.type(path_raw)() == 'string') {
+                paths = [path_raw]
+            } else if (a.type(path_raw)() == 'array') {
+                paths = path_raw
+            } else {
+                a.assert(false, `Field "path" for SVG outline "${name}" must be a string or an array!`)
+            }
+
+            shape = { models: {} }
+            for (const [i, p] of paths.entries()) {
+                a.assert(a.type(p)() == 'string', `Path ${i} for SVG outline "${name}" must be a string!`)
+                shape.models['path' + i] = m.importer.fromSVGPathData(p, accuracy)
+            }
         } else {
             let parsed_points = []
             if (a.type(points_raw)() == 'string') {
