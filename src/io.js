@@ -65,7 +65,7 @@ exports.unpack = async (zip) => {
         }
 
         const svg_injected = (config, name, points, outlines, units) => {
-            return [() => {
+            return [point => {
                 let combined = undefined
                 paths.forEach((p) => {
                     const imported = makerjs.importer.fromSVGPathData(p)
@@ -76,8 +76,16 @@ exports.unpack = async (zip) => {
                         makerjs.model.simplify(combined)
                     }
                 })
+                if (point.meta.mirrored) {
+
+                    combined = makerjs.model.mirror(combined, true, false)
+
+                }
+
                 const bbox = makerjs.measure.modelExtents(combined)
+
                 return [combined, {low: bbox.low, high: bbox.high}]
+
             }, units]
         }
 

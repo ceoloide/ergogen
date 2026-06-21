@@ -64,7 +64,8 @@ describe('IO', function() {
         // Verify the injected function works
         const shapeMaker = injections[0][2]
         const [maker, units] = shapeMaker({}, 'test', {}, {}, {})
-        const [shape, bbox] = maker()
+        const [shape, bbox] = maker({ meta: {} })
+
         shape.paths.should.not.be.empty
     })
 })

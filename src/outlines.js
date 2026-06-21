@@ -315,7 +315,7 @@ const svg = (config, name, points, outlines, units) => {
     a.assert(path_raw || points_raw, `Either "path" or "points" must be provided for SVG outline "${name}"!`)
     a.assert(!(path_raw && points_raw), `Both "path" and "points" cannot be provided for SVG outline "${name}"!`)
 
-    return [() => {
+    return [point => {
         let shape
         if (path_raw) {
             let paths = []
@@ -371,6 +371,9 @@ const svg = (config, name, points, outlines, units) => {
             a.assert(chain.endless, `SVG paths need to be closed shapes (check failed for "${name}")`)
         }
 
+        if (point.meta.mirrored) {
+            shape = m.model.mirror(shape, true, false)
+        }
         const bbox = m.measure.modelExtents(shape)
         return [shape, {low: bbox.low, high: bbox.high}]
     }, units]
