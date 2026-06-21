@@ -1,11 +1,1 @@
 Error: Input doesn't resolve into an object!
-    at exports.interpret (/app/src/io.js:89:15)
-    at Object.process (/app/src/ergogen.js:16:31)
-    at /app/src/cli.js:133:29
-    at Object.<anonymous> (/app/src/cli.js:210:3)
-    at Module._compile (node:internal/modules/cjs/loader:1705:14)
-    at Object..js (node:internal/modules/cjs/loader:1838:10)
-    at Module.load (node:internal/modules/cjs/loader:1441:32)
-    at Function._load (node:internal/modules/cjs/loader:1263:12)
-    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
-    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)

@@ -1,4 +1,2 @@
 Could not read config file "test/"!
 Error: Ambiguous config in bundle!
-    at exports.unpack (/app/src/io.js:27:15)
-    at /app/src/cli.js:113:46
