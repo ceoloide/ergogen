@@ -6,6 +6,7 @@ const Point = require('./point')
 const prep = require('./prepare')
 const anchor = require('./anchor').parse
 const filter = require('./filter').parse
+const injected_outlines = require('./outlines/index')
 const hulljs = require('hull')
 
 const binding = (base, bbox, point, units) => {
@@ -304,12 +305,64 @@ const path = (config, name, points, outlines, units) => {
     }, units]
 }
 
+const svg = (config, name, points, outlines, units) => {
+    a.unexpected(config, name, ['path', 'points', 'accuracy'])
+    const path = a.sane(config.path || '', `${name}.path`, 'string')(units)
+    let points_raw = config.points
+    const accuracy = a.sane(config.accuracy || 0.0001, `${name}.accuracy`, 'number')(units)
+    a.assert(accuracy !== 0, `Accuracy for SVG outline "${name}" cannot be 0!`)
+
+    a.assert(path || points_raw, `Either "path" or "points" must be provided for SVG outline "${name}"!`)
+    a.assert(!(path && points_raw), `Both "path" and "points" cannot be provided for SVG outline "${name}"!`)
+
+    return [() => {
+        let shape
+        if (path) {
+            shape = m.importer.fromSVGPathData(path, accuracy)
+        } else {
+            let parsed_points = []
+            if (a.type(points_raw)() == 'string') {
+                const parts = points_raw.split(/[\s,]+/).filter(p => p.length > 0)
+                a.assert(parts.length % 2 == 0, `Points string for SVG outline "${name}" must have an even number of coordinates!`)
+                for (let i = 0; i < parts.length; i += 2) {
+                    parsed_points.push([parseFloat(parts[i]), parseFloat(parts[i+1])])
+                }
+            } else if (a.type(points_raw)() == 'array') {
+                for (const [i, p] of points_raw.entries()) {
+                    if (a.type(p)() == 'array') {
+                        a.assert(p.length == 2, `Point ${i} for SVG outline "${name}" must have 2 coordinates!`)
+                        parsed_points.push([p[0], p[1]])
+                    } else if (a.type(p)() == 'object') {
+                        a.assert(p.x !== undefined && p.y !== undefined, `Point ${i} for SVG outline "${name}" must have x and y properties!`)
+                        parsed_points.push([p.x, p.y])
+                    } else {
+                        a.assert(false, `Point ${i} for SVG outline "${name}" is not a valid point!`)
+                    }
+                }
+            } else {
+                a.assert(false, `Field "points" for SVG outline "${name}" must be a string or an array!`)
+            }
+            shape = new m.models.ConnectTheDots(true, parsed_points)
+        }
+
+        const chains = m.model.findChains(shape)
+        a.assert(chains.length > 0, `SVG outline "${name}" does not contain any valid paths!`)
+        for (const chain of chains) {
+            a.assert(chain.endless, `SVG paths need to be closed shapes (check failed for "${name}")`)
+        }
+
+        const bbox = m.measure.modelExtents(shape)
+        return [shape, {low: bbox.low, high: bbox.high}]
+    }, units]
+}
+
 const whats = {
     rectangle,
     circle,
     polygon,
     outline,
     path,
+    svg,
     hull
 }
 
@@ -361,7 +414,7 @@ exports.parse = (config, points, units) => {
 
             // process keys that are common to all part declarations
             const operation = u[a.in(part.operation || 'add', `${name}.operation`, ['add', 'subtract', 'intersect', 'stack'])]
-            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path', 'hull'])
+            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path', 'hull', 'svg', ...Object.keys(injected_outlines)])
             const bound = !!part.bound
             const asym = a.asym(part.asym || 'source', `${name}.asym`)
 
@@ -390,7 +443,7 @@ exports.parse = (config, points, units) => {
             delete part.scale
 
             // a prototype "shape" maker (and its units) are computed
-            const [shape_maker, shape_units] = whats[what](part, name, points, outlines, units)
+            const [shape_maker, shape_units] = (whats[what] || injected_outlines[what])(part, name, points, outlines, units)
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
             // and then the shape is repeated for all where positions
@@ -429,3 +482,7 @@ exports.parse = (config, points, units) => {
 
     return outlines
 }   
+
+exports.inject_outline = (name, outline) => {
+    injected_outlines[name] = outline
+}
