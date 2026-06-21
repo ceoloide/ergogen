@@ -1,14 +1,27 @@
 const m = require('makerjs')
+const fs = require('fs-extra')
+const path = require('path')
 const {fixture} = require('../helpers/fixture')
 
+const dump = process.env.npm_config_dump
+
 describe('MakerJS', function() {
+
+    const check = (actual, name) => {
+        const ref_path = path.join(__dirname, '../fixtures', name)
+        if (dump) {
+            fs.writeFileSync(ref_path, actual)
+        } else {
+            const ref = fixture(name)
+            actual.should.equal(ref)
+        }
+    }
 
     it('disappearance', function() {
         // test combination disappearance, as per https://github.com/microsoft/maker.js/issues/465
         const disappear = fixture('makerjs/bug_465_disappear.json')
         const combined = m.model.combineUnion(disappear.models.a, disappear.models.b)
-        const ref = fixture('makerjs/bug_465_disappear_good.dxf')
-        m.exporter.toDXF(combined).should.equal(ref)
+        check(m.exporter.toDXF(combined), 'makerjs/bug_465_disappear_good.dxf')
     })
 
     it('weird combination', function() {
@@ -22,14 +35,9 @@ describe('MakerJS', function() {
         const {farPoint, deepcopy} = require('../../src/utils')
 
         const bad = m.model.combineUnion(deepcopy(base_plus_a), deepcopy(b))
-        const bad_ref = fixture('makerjs/bug_465_weird_bad.dxf')
-        m.exporter.toDXF(bad).should.equal(bad_ref)
+        check(m.exporter.toDXF(bad), 'makerjs/bug_465_weird_bad.dxf')
         
         const good = m.model.combine(deepcopy(base_plus_a), deepcopy(b), false, true, false, true, {farPoint})
-        const good_ref = fixture('makerjs/bug_465_weird_good.dxf')
-        m.exporter.toDXF(good).should.equal(good_ref)
+        check(m.exporter.toDXF(good), 'makerjs/bug_465_weird_good.dxf')
     })
 })
-
-
-

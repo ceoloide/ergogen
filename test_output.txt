@@ -1,0 +1,5455 @@
+
+> ergogen@4.2.1 test
+> mocha -r test/helpers/register test/index.js
+
+
+
+  Utils
+    ✔ deepcopy
+    ✔ deep
+    ✔ template
+    ✔ eq
+    ✔ line
+    ✔ circle
+    ✔ rect
+    ✔ poly
+    ✔ poly
+    ✔ combine helpers
+    ✔ semver
+    ✔ satisfies
+
+  Units
+    ✔ defaults
+    ✔ units
+    ✔ variables
+
+  Prepare
+    ✔ unnest
+    ✔ extend
+    ✔ inherit
+    ✔ parameterize
+    ✔ concat
+
+  Point
+    ✔ construction
+    ✔ access
+    ✔ cloning
+    ✔ shifting
+    ✔ rotation
+    ✔ resistance
+    ✔ mirroring
+    ✔ positioning
+
+  Operation
+    ✔ op_prefix
+    ✔ operation
+
+  MakerJS
+    1) disappearance
+    2) weird combination
+
+  Internals
+    ✔ pcb outline conversion with kicad5
+    ✔ pcb outline conversion with kicad8
+    ✔ injection
+
+  Interface
+    ✔ debug
+    ✔ formats
+    ✔ preprocessor
+    ✔ engine
+    ✔ svg
+
+  Filter
+    ✔ without points
+    ✔ empty filter
+    ✔ similar
+
+  Assert
+    ✔ mathnum
+    ✔ assert
+    ✔ type
+    ✔ sane
+    ✔ unexpected
+    ✔ in
+    ✔ arr
+
+  Anchor
+    ✔ params
+    ✔ recursive
+    ✔ aggregate
+    ✔ intersect
+    ✔ shift
+    ✔ orient
+    ✔ rotate
+    ✔ affect
+    ✔ resist
+    ✔ string
+    ✔ array
+
+  Points
+    ✔ units
+    ✔ samename
+    3) rotations
+    4) overrides
+    5) mirrors
+    ✔ mirror variable
+    6) default
+    7) basic 2x2
+    8) autobind
+    9) adjustments
+
+  Outlines
+    10) rectangles
+    11) polygons
+    ✔ path
+    12) outlines
+    13) hull
+    14) expand
+    15) circles
+    16) binding
+    17) basic
+    18) affect mirror
+
+  Cases
+    ✔ operations
+    ✔ cube
+
+  Pcbs
+    ✔ references
+    ✔ outlines
+    ✔ mock template
+    ✔ mock footprints
+    ✔ kicad8 template
+
+  Footprints
+    ✔ trrs
+    ✔ rest
+    ✔ promicro
+    ✔ pad
+    ✔ mx
+    ✔ diode
+    ✔ chocmini
+    ✔ choc
+    ✔ button
+
+  CLI
+    19) zip
+    ✔ nonexistent input
+    20) no clean
+    ✔ missing input
+    21) minimal yml
+    22) minimal kle
+    23) minimal
+    24) medium
+    25) clean
+    26) bundle
+    27) big
+    ✔ bad template
+    ✔ bad input
+    ✔ bad bundle
+    28) atreus kle
+
+
+  84 passing (16s)
+  28 failing
+
+  1) MakerJS
+       disappearance:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\n…' to equal '0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       172.120343
+       20
+       -0.9433769
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       163.3642731
+       20
+       -4.6624146
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       172.5901893
+       20
+       -0.7723669
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       166.0918066
+       20
+       17.0817931
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       137.0442521
+       20
+       15.0227699
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       139.7804132
+       20
+       7.505229
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       143.5426348
+       20
+       -2.8313899
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       153.2470249
+       20
+       -28.0320806
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       169.2217995
+       20
+       -22.2177382
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       153.418035
+       20
+       -28.5019269
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       169.6916458
+       20
+       -22.0467281
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       146.2787959
+       20
+       -10.3489309
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       165.6219603
+       20
+       16.910783
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       159.8076179
+       20
+       32.8855575
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       134.4359171
+       20
+       23.6510137
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       159.6366078
+       20
+       33.3554038
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       163.3556454
+       20
+       24.5993339
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       133.9660708
+       20
+       23.4800036
+
+      at Context.<anonymous> (test/unit/makerjs.js:11:43)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  2) MakerJS
+       weird combination:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\n…' to equal '0\nSECTION\n2\nHEADER\n0\nENDSEC\n0\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       1
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       1
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       5
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       5
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       5
+       20
+       -5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       -5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       5
+       20
+       0
+
+      at Context.<anonymous> (test/unit/makerjs.js:26:38)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  3) Points
+       rotations:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -12.7279221
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       12.7279221
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12.7279221
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       -12.7279221
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -26.1629509
+       20
+       13.4350288
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -13.4350288
+       20
+       26.1629509
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -0.7071067
+       20
+       13.4350288
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -13.4350288
+       20
+       0.7071067
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7.2175144
+       20
+       25.2175144
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       25.2175144
+       20
+       25.2175144
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       25.2175144
+       20
+       7.2175144
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7.2175144
+       20
+       7.2175144
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       16.2175144
+       20
+       51.8804653
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28.9454365
+       20
+       39.1525432
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       16.2175144
+       20
+       26.4246211
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3.4895923
+       20
+       39.1525432
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  4) Points
+       overrides:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29
+       20
+       29
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  5) Points
+       mirrors:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       110
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       128
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       128
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       110
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       129
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       147
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       147
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       129
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       129
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       147
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       147
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       129
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -128
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -110
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -110
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -128
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -147
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -129
+       20
+       128
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -129
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -147
+       20
+       110
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -147
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -129
+       20
+       147
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -129
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -147
+       20
+       129
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       48.05
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       66.05
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       66.05
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       48.05
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29.05
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47.05
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47.05
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29.05
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29.05
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47.05
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47.05
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29.05
+       20
+       10
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  6) Points
+       default:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  7) Points
+       basic 2x2:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  8) Points
+       autobind:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -2.5
+       20
+       -2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -2.5
+       20
+       2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -2.5
+       20
+       2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3.5
+       20
+       -2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15.5
+       20
+       -2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       21.5
+       20
+       -2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15.5
+       20
+       2.5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15.5
+       20
+       -2.5
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  9) Points
+       adjustments:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       28
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       9
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -9
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -31.7279221
+       20
+       19
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -19
+       20
+       31.7279221
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -6.2720779
+       20
+       19
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -19
+       20
+       6.2720779
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       28
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       36.5688034
+       20
+       13.9315046
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       54.500308
+       20
+       12.3627012
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       52.9315046
+       20
+       -5.5688034
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       35
+       20
+       -4
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       48.1867095
+       20
+       31.9876465
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       66.1182141
+       20
+       30.4188431
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       64.5494107
+       20
+       12.4873385
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       46.6179061
+       20
+       14.0561419
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       49.8426686
+       20
+       50.9153458
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       67.7741732
+       20
+       49.3465424
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       66.2053698
+       20
+       31.4150378
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       48.2738652
+       20
+       32.9838412
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  10) Outlines
+       rectangles:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       45
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       0
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       25
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       10
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       25
+       20
+       35
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       25
+       20
+       40
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       35
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       35
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -5
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -5
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       55
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       55
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       45
+       20
+       15
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  11) Outlines
+       polygons:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       35
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       47.5
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       -20
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       20
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       35
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       40
+       20
+       -20
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       55
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       5
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  12) Outlines
+       outlines:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       4.3
+       20
+       -3.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -3.3
+       20
+       -4.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -4.3
+       20
+       -3.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -3.3
+       20
+       12.8
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       13.8
+       20
+       -3.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       6.2
+       20
+       -4.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       5.2
+       20
+       -3.3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       6.2
+       20
+       12.8
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3.3
+       20
+       11.8
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -3.3
+       20
+       11.8
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -3.3
+       20
+       -3.3
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3.3
+       20
+       -3.3
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12.8
+       20
+       11.8
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       6.2
+       20
+       11.8
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       6.2
+       20
+       -3.3
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12.8
+       20
+       -3.3
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  13) Outlines
+       hull:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       54
+       20
+       47
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       36
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       36
+       20
+       -9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       1.3948779
+       20
+       -18.304489
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -14.9186622
+       20
+       -10.6973603
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -22.5257909
+       20
+       -27.0109004
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -6.2122508
+       20
+       -34.6180291
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       54
+       20
+       -9
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  14) Outlines
+       expand:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -17
+       20
+       -17
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       17
+       20
+       -17
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -17
+       20
+       17
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -17
+       20
+       -17
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -16
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       16
+       20
+       -10
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       16
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -16
+       20
+       10
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -12.0710678
+       20
+       -15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12.0710678
+       20
+       -15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       15
+       20
+       -12.0710678
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12.0710678
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -12.0710678
+       20
+       15
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       12.0710678
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       -12.0710678
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -15
+       20
+       -12.0710678
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       10
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  15) Outlines
+       circles:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       8.8196601
+       20
+       10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       5
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       31.1803399
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       45
+       20
+       10
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       0
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       0
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       10
+--
+       0
+       ARC
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       10
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  16) Outlines
+       binding:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -20
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -20
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -14.75
+       20
+       86
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       10
+       20
+       40.6666667
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       40.6666667
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -14.75
+       20
+       40.6666667
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       40
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       40
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       50
+       20
+       9
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       40
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       20
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       44.75
+       20
+       40.6666667
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       44.75
+       20
+       40.6666667
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  17) Outlines
+       basic:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -10
+       20
+       29
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       29
+       20
+       -10
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       26
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       26
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       26
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       26
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       12
+       20
+       26
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  18) Outlines
+       affect mirror:
+
+      AssertionError: expected '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…' to deeply equal '0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n…'
+      + expected - actual
+
+       LTYPE
+       72
+       65
+       70
+      -0
+      +64
+       2
+       CONTINUOUS
+       3
+       ______
+--
+       0
+       40
+       0
+       0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DASHED
+      -3
+      -_ _ _
+      -73
+      -2
+      -40
+      -7.5
+      -49
+      -5
+      -49
+      --2.5
+      -0
+      -LTYPE
+      -72
+      -65
+      -70
+      -0
+      -2
+      -DOTTED
+      -3
+      -. . .
+      -73
+      -2
+      -40
+      -1.5
+      -49
+      -0.5
+      -49
+      --1
+      -0
+       ENDTAB
+       0
+       TABLE
+       2
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       7
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -7
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       23
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       37
+       20
+       -7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       37
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       23
+       20
+       7
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       23
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       37
+       20
+       12
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       37
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       23
+       20
+       26
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       27
+       20
+       -5.1961524
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       32.1961524
+       20
+       -8.1961524
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       35.1961524
+       20
+       -3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       27
+       20
+       13.8038476
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       32.1961524
+       20
+       10.8038476
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       35.1961524
+       20
+       16
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       30
+       20
+       19
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -2.1961524
+       20
+       -8.1961524
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3
+       20
+       -5.1961524
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       0
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -5.1961524
+       20
+       -3
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -2.1961524
+       20
+       10.8038476
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       3
+       20
+       13.8038476
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       0
+       20
+       19
+--
+       0
+       LINE
+       8
+       0
+      -6
+      -CONTINUOUS
+       10
+       -5.1961524
+       20
+       16
+
+      at Context.<anonymous> (test/index.js:94:47)
+
+  19) CLI
+       zip:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  20) CLI
+       no clean:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  21) CLI
+       minimal yml:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  22) CLI
+       minimal kle:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  23) CLI
+       minimal:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  24) CLI
+       medium:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  25) CLI
+       clean:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  26) CLI
+       bundle:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  27) CLI
+       big:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
+
+  28) CLI
+       atreus kle:
+
+      AssertionError: expected false to be true
+      + expected - actual
+
+      -false
+      +true
+
+      at Context.<anonymous> (test/index.js:197:45)
+      at process.processImmediate (node:internal/timers:484:21)
