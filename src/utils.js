@@ -135,3 +135,36 @@ const satisfies = exports.satisfies = (current, expected) => {
         )
     )
 }
+
+exports.outlineFromSvg = (text) => {
+    // Simple SVG path extraction for now
+    const paths = []
+    const pathRegex = /<path[\s\S]*?\sd=["']([\s\S]*?)["']/gi
+    let match
+    while ((match = pathRegex.exec(text)) !== null) {
+        paths.push(match[1])
+    }
+
+    return (config, name, points, outlines, units) => {
+        return [point => {
+            let combined = undefined
+            paths.forEach((p) => {
+                const imported = m.importer.fromSVGPathData(p)
+                if (combined === undefined) {
+                    combined = imported
+                } else {
+                    combined = exports.union(combined, imported)
+                    m.model.simplify(combined)
+                }
+            })
+            if (point.meta.mirrored) {
+                combined = m.model.mirror(combined, true, false)
+            }
+
+            combined = m.model.mirror(combined, false, true)
+            const bbox = m.measure.modelExtents(combined)
+
+            return [combined, {low: bbox.low, high: bbox.high}]
+        }, units]
+    }
+}

@@ -1,0 +1,4 @@
+const u = require('../utils')
+module.exports = u.outlineFromSvg(
+`<svg width="15.55mm" height="8.63mm" viewBox="0 0 15.55 8.63" xmlns="http://www.w3.org/2000/svg"><g id="svgGroup" stroke-linecap="round" fill-rule="evenodd" font-size="9pt" stroke="#000" stroke-width="0.25mm" fill="none" style="stroke:#000;stroke-width:0.25mm;fill:none"><path d="M 8.4 6.58 m -2.05 0 a 2.05 2.05 0 0 1 4.1 0 a 2.05 2.05 0 0 1 -4.1 0 z M 12.95 2.8 L 15.55 2.8 L 15.55 0.2 L 12.95 0.2 L 12.95 2.8 Z M 0 5.34 L 2.6 5.34 L 2.6 2.74 L 0 2.74 L 0 5.34 Z M 4.59 4.04 m -1.5 0 a 1.5 1.5 0 0 1 3 0 a 1.5 1.5 0 0 1 -3 0 z M 10.94 1.5 m -1.5 0 a 1.5 1.5 0 0 1 3 0 a 1.5 1.5 0 0 1 -3 0 z M 3.32 6.58 m -0.95 0 a 0.95 0.95 0 0 1 1.9 0 a 0.95 0.95 0 0 1 -1.9 0 z M 13.48 6.58 m -0.95 0 a 0.95 0.95 0 0 1 1.9 0 a 0.95 0.95 0 0 1 -1.9 0 z" vector-effect="non-scaling-stroke"/></g></svg>`
+)

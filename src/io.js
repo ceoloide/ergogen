@@ -56,41 +56,7 @@ exports.unpack = async (zip) => {
     for (const ot of ots.file(/.*\.svg$/)) {
         const name = ot.name.slice('outlines/'.length).replace(/\.svg$/, '')
         const text = await ot.async('string')
-        // Simple SVG path extraction for now
-        const paths = []
-        const pathRegex = /<path[\s\S]*?\sd=["']([\s\S]*?)["']/gi
-        let match
-        while ((match = pathRegex.exec(text)) !== null) {
-            paths.push(match[1])
-        }
-
-        const svg_injected = (config, name, points, outlines, units) => {
-            return [point => {
-                let combined = undefined
-                paths.forEach((p) => {
-                    const imported = makerjs.importer.fromSVGPathData(p)
-                    if (combined === undefined) {
-                        combined = imported
-                    } else {
-                        combined = u.union(combined, imported)
-                        makerjs.model.simplify(combined)
-                    }
-                })
-                if (point.meta.mirrored) {
-
-                    combined = makerjs.model.mirror(combined, true, false)
-
-                }
-
-                combined = makerjs.model.mirror(combined, false, true)
-                const bbox = makerjs.measure.modelExtents(combined)
-
-                return [combined, {low: bbox.low, high: bbox.high}]
-
-            }, units]
-        }
-
-        injections.push(['outline', name, svg_injected])
+        injections.push(['outline', name, u.outlineFromSvg(text)])
     }
 
     return [config_text, injections]

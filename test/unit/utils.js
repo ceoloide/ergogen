@@ -160,4 +160,23 @@ describe('Utils', function() {
         u.satisfies({major: 1, minor: 2, patch: 3}, {major: 1, minor: 2, patch: 3}).should.be.true
     })
 
+    it('svg', function() {
+        const text = '<svg><path d="M 0 0 L 10 0 L 10 10 Z" /></svg>'
+        const svgFn = u.outlineFromSvg(text)
+        svgFn.should.be.a('function')
+        
+        const [objFn, units] = svgFn({}, 'test', {}, {}, {})
+        objFn.should.be.a('function')
+        
+        const [combined, bbox] = objFn({ meta: {} })
+        combined.paths.should.not.be.empty
+        bbox.low.should.deep.equal([0, 0])
+        bbox.high.should.deep.equal([10, 10])
+        
+        // test mirrored
+        const [combinedMirrored, bboxMirrored] = objFn({ meta: { mirrored: true } })
+        bboxMirrored.low.should.deep.equal([-10, 0])
+        bboxMirrored.high.should.deep.equal([0, 10])
+    })
+
 })
