@@ -339,6 +339,7 @@ const svg = (config, name, points, outlines, units) => {
                 }
             }
             shape = combined
+            shape = m.model.mirror(shape, false, true)
         } else {
             let parsed_points = []
             if (a.type(points_raw)() == 'string') {

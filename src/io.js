@@ -82,6 +82,7 @@ exports.unpack = async (zip) => {
 
                 }
 
+                combined = makerjs.model.mirror(combined, false, true)
                 const bbox = makerjs.measure.modelExtents(combined)
 
                 return [combined, {low: bbox.low, high: bbox.high}]
