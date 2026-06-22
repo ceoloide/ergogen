@@ -9,4 +9,4 @@ points:
 outlines:
   not_closed:
     - what: svg
-      path: M 0 0 L 10 0 L 10 10
+      paths: M 0 0 L 10 0 L 10 10

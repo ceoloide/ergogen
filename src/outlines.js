@@ -306,65 +306,36 @@ const path = (config, name, points, outlines, units) => {
 }
 
 const svg = (config, name, points, outlines, units) => {
-    a.unexpected(config, name, ['path', 'points', 'accuracy'])
-    let path_raw = config.path
-    let points_raw = config.points
+    a.unexpected(config, name, ['paths', 'accuracy'])
+    let paths_raw = config.paths
     const accuracy = a.sane(config.accuracy || 0.0001, `${name}.accuracy`, 'number')(units)
     a.assert(accuracy !== 0, `Accuracy for SVG outline "${name}" cannot be 0!`)
 
-    a.assert(path_raw || points_raw, `Either "path" or "points" must be provided for SVG outline "${name}"!`)
-    a.assert(!(path_raw && points_raw), `Both "path" and "points" cannot be provided for SVG outline "${name}"!`)
+    a.assert(paths_raw, `The "paths" field must be provided for SVG outline "${name}"!`)
 
     return [point => {
-        let shape
-        if (path_raw) {
-            let paths = []
-            if (a.type(path_raw)() == 'string') {
-                paths = [path_raw]
-            } else if (a.type(path_raw)() == 'array') {
-                paths = path_raw
-            } else {
-                a.assert(false, `Field "path" for SVG outline "${name}" must be a string or an array!`)
-            }
-
-            let combined = undefined
-            for (const [i, p] of paths.entries()) {
-                a.assert(a.type(p)() == 'string', `Path ${i} for SVG outline "${name}" must be a string!`)
-                const imported = m.importer.fromSVGPathData(p, accuracy)
-                if (combined === undefined) {
-                    combined = imported
-                } else {
-                    combined = u.union(combined, imported)
-                    m.model.simplify(combined)
-                }
-            }
-            shape = combined
-            shape = m.model.mirror(shape, false, true)
+        let paths = []
+        if (a.type(paths_raw)() == 'string') {
+            paths = [paths_raw]
+        } else if (a.type(paths_raw)() == 'array') {
+            paths = paths_raw
         } else {
-            let parsed_points = []
-            if (a.type(points_raw)() == 'string') {
-                const parts = points_raw.split(/[\s,]+/).filter(p => p.length > 0)
-                a.assert(parts.length % 2 == 0, `Points string for SVG outline "${name}" must have an even number of coordinates!`)
-                for (let i = 0; i < parts.length; i += 2) {
-                    parsed_points.push([parseFloat(parts[i]), parseFloat(parts[i+1])])
-                }
-            } else if (a.type(points_raw)() == 'array') {
-                for (const [i, p] of points_raw.entries()) {
-                    if (a.type(p)() == 'array') {
-                        a.assert(p.length == 2, `Point ${i} for SVG outline "${name}" must have 2 coordinates!`)
-                        parsed_points.push([p[0], p[1]])
-                    } else if (a.type(p)() == 'object') {
-                        a.assert(p.x !== undefined && p.y !== undefined, `Point ${i} for SVG outline "${name}" must have x and y properties!`)
-                        parsed_points.push([p.x, p.y])
-                    } else {
-                        a.assert(false, `Point ${i} for SVG outline "${name}" is not a valid point!`)
-                    }
-                }
-            } else {
-                a.assert(false, `Field "points" for SVG outline "${name}" must be a string or an array!`)
-            }
-            shape = new m.models.ConnectTheDots(true, parsed_points)
+            a.assert(false, `Field "paths" for SVG outline "${name}" must be a string or an array!`)
         }
+
+        let combined = undefined
+        for (const [i, p] of paths.entries()) {
+            a.assert(a.type(p)() == 'string', `Path ${i} for SVG outline "${name}" must be a string!`)
+            const imported = m.importer.fromSVGPathData(p, accuracy)
+            if (combined === undefined) {
+                combined = imported
+            } else {
+                combined = u.union(combined, imported)
+                m.model.simplify(combined)
+            }
+        }
+        let shape = combined
+        shape = m.model.mirror(shape, false, true)
 
         const chains = m.model.findChains(shape)
         a.assert(chains.length > 0, `SVG outline "${name}" does not contain any valid paths!`)

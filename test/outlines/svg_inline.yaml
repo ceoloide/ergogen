@@ -9,25 +9,4 @@ points:
 outlines:
   svgpath:
     - what: svg
-      path: M 0 0 L 10 0 L 10 10 L 0 10 Z
-  svgpointsstring:
-    - what: svg
-      points: 0 0, 10 0, 10 10, 0 10
-  svgpointsarray:
-    - what: svg
-      points:
-        - [0, 0]
-        - [10, 0]
-        - [10, 10]
-        - [0, 10]
-  svgpointsobjects:
-    - what: svg
-      points:
-        - x: 0
-          y: 0
-        - x: 10
-          y: 0
-        - x: 10
-          y: 10
-        - x: 0
-          y: 10
+      paths: M 0 0 L 10 0 L 10 10 L 0 10 Z
