@@ -1,13 +1,16 @@
 const m = require('makerjs')
+
 const u = require('./utils')
 const a = require('./assert')
 const o = require('./operation')
-const Point = require('./point')
 const prep = require('./prepare')
 const anchor = require('./anchor').parse
 const filter = require('./filter').parse
-const injected_outlines = require('./outlines/index')
+
+const Point = require('./point')
 const hulljs = require('hull')
+
+const outline_types = require('./outlines')
 
 const binding = (base, bbox, point, units) => {
 
@@ -409,7 +412,7 @@ exports.parse = (config, points, units) => {
 
             // process keys that are common to all part declarations
             const operation = u[a.in(part.operation || 'add', `${name}.operation`, ['add', 'subtract', 'intersect', 'stack'])]
-            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path', 'hull', 'svg', ...Object.keys(injected_outlines)])
+            const what = a.in(part.what || 'outline', `${name}.what`, ['rectangle', 'circle', 'polygon', 'outline', 'path', 'hull', 'svg', ...Object.keys(outline_types)])
             const bound = !!part.bound
             const asym = a.asym(part.asym || 'source', `${name}.asym`)
 
@@ -438,7 +441,7 @@ exports.parse = (config, points, units) => {
             delete part.scale
 
             // a prototype "shape" maker (and its units) are computed
-            const [shape_maker, shape_units] = (whats[what] || injected_outlines[what])(part, name, points, outlines, units)
+            const [shape_maker, shape_units] = (whats[what] || outline_types[what])(part, name, points, outlines, units)
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
             // and then the shape is repeated for all where positions
@@ -479,5 +482,5 @@ exports.parse = (config, points, units) => {
 }   
 
 exports.inject_outline = (name, outline) => {
-    injected_outlines[name] = outline
+    outline_types[name] = outline
 }
