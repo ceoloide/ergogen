@@ -12,6 +12,10 @@ const hulljs = require('hull')
 
 const outline_types = require('./outlines')
 
+exports.inject_outline = (name, outline) => {
+    outline_types[name] = outline
+}
+
 const binding = (base, bbox, point, units) => {
 
     let bind = a.trbl(point.meta.bind || 0, `${point.meta.name}.bind`)(units)
@@ -480,7 +484,3 @@ exports.parse = (config, points, units) => {
 
     return outlines
 }   
-
-exports.inject_outline = (name, outline) => {
-    outline_types[name] = outline
-}
