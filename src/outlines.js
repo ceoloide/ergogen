@@ -8,7 +8,6 @@ const anchor = require('./anchor').parse
 const filter = require('./filter').parse
 const injected_outlines = require('./outlines/index')
 const hulljs = require('hull')
-const svg_helper = require('./svg_helper')
 
 const binding = (base, bbox, point, units) => {
 
@@ -307,7 +306,7 @@ const path = (config, name, points, outlines, units) => {
 }
 
 const svg = (config, name, points, outlines, units) => {
-    return svg_helper.svg_paths_to_outline(config.paths, config, name, points, outlines, units)
+    return u.svg_paths_to_outline(config.paths, config, name, points, outlines, units)
 }
 
 const whats = {

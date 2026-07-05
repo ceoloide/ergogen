@@ -5,7 +5,6 @@ const makerjs = require('makerjs')
 const u = require('./utils')
 const a = require('./assert')
 const kle = require('./kle')
-const svg_helper = require('./svg_helper')
 
 const package_json = require('../package.json')
 
@@ -70,7 +69,7 @@ exports.unpack = async (zip) => {
             }
 
             const svg_injected = (config, name, points, outlines, units) => {
-                return svg_helper.svg_paths_to_outline(paths, config, name, points, outlines, units)
+                return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
             }
 
             injections.push(['outline', name, svg_injected])

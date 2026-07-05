@@ -19,11 +19,11 @@ const svgOutlinePlugin = () => {
       // Return compiled JS code string invoking the shared svg_helper
       return {
         code: `
-          const svg_helper = require('../svg_helper');
+          const u = require('../utils');
 
           module.exports = (config, name, points, outlines, units) => {
             const paths = ${JSON.stringify(paths)};
-            return svg_helper.svg_paths_to_outline(paths, config, name, points, outlines, units);
+            return u.svg_paths_to_outline(paths, config, name, points, outlines, units);
           };
         `,
         map: { mappings: '' }
