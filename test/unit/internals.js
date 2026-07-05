@@ -22,9 +22,41 @@ describe('Internals', function() {
         kicad8.convert_outline.bind(this).should.throw("Can't convert path type")
     })
 
-    it('injection', function() {
+    it('injection', async function() {
         // warn on unknown injection type
         ergogen.inject.bind(this, 'nonexistent', 'name', 'value').should.throw('Unknown injection type')
+
+        // should allow injecting outlines
+        const injected = (config, name, points, outlines, units) => {
+            return [() => {
+                const shape = new m.models.Rectangle(10, 10)
+                const bbox = m.measure.modelExtents(shape)
+                return [shape, {low: bbox.low, high: bbox.high}]
+            }, units]
+        }
+        ergogen.inject('outline', 'my_injected', injected)
+
+        const config = {
+            points: {
+                zones: {
+                    matrix: {
+                        columns: {
+                            pos: {
+                                key: { x: 0, y: 0 }
+                            }
+                        }
+                    }
+                }
+            },
+            outlines: {
+                test: [
+                    { what: 'my_injected' }
+                ]
+            }
+        }
+
+        const result = await ergogen.process(config)
+        result.outlines.test.should.exist
     })
 })
 
