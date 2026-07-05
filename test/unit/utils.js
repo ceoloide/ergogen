@@ -160,4 +160,17 @@ describe('Utils', function() {
         u.satisfies({major: 1, minor: 2, patch: 3}, {major: 1, minor: 2, patch: 3}).should.be.true
     })
 
+    it('svg_paths_to_outline origin shift', function() {
+        const path = 'M 0 0 L 10 0 L 10 10 Z'
+        const config = {
+            paths: path,
+            origin: [5, 5]
+        }
+        const [maker, units] = u.svg_paths_to_outline(path, config, 'test_svg', {}, {}, {})
+        const [shape, bbox] = maker({ meta: { mirrored: false } })
+        
+        bbox.low.should.deep.equal([-5, 5])
+        bbox.high.should.deep.equal([5, 15])
+    })
+
 })

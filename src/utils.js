@@ -171,7 +171,7 @@ exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units
         shape = m.model.mirror(shape, false, true)
 
         if (origin[0] !== 0 || origin[1] !== 0) {
-            shape = m.model.moveRelative(shape, [-origin[0], -origin[1]])
+            shape = m.model.moveRelative(shape, [-origin[0], origin[1]])
         }
 
         if (flip_horizontally || flip_vertically) {
