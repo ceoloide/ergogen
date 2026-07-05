@@ -312,7 +312,8 @@ exports.parse = (config, units) => {
     let points = {}
 
     // rendering zones
-    for (let [zone_name, zone] of Object.entries(zones)) {
+    for (let [zone_name, zone_orig] of Object.entries(zones)) {
+        let zone = zone_orig
 
         // zone sanitization
         zone = a.sane(zone || {}, `points.zones.${zone_name}`, 'object')()
@@ -321,9 +322,9 @@ exports.parse = (config, units) => {
         const anchor = anchor_lib.parse(zone.anchor || {}, `points.zones.${zone_name}.anchor`, points)(units)
         const rotate = a.sane(zone.rotate || 0, `points.zones.${zone_name}.rotate`, 'number')(units)
         const mirror = zone.mirror
-        delete zone.anchor
-        delete zone.rotate
-        delete zone.mirror
+        const {anchor: _anchor, rotate: _rotate, mirror: _mirror, ...rest} = zone
+        zone = rest
+
 
         // creating new points
         let new_points = render_zone(zone_name, zone, anchor, global_key, units)
