@@ -59,6 +59,123 @@ describe('Internals', function() {
         const result = await ergogen.process(config)
         result.outlines.test.should.exist
     })
+
+    it('should allow injecting footprints', async function() {
+        const footprint = {
+            params: {},
+            body: () => 'custom-footprint-body'
+        }
+        ergogen.inject('footprint', 'my_custom_footprint', footprint)
+
+        const config = {
+            points: { zones: { matrix: { columns: { pos: { key: { x: 0, y: 0 } } } } } },
+            outlines: {
+                box: [
+                    { what: 'rectangle', size: 20 }
+                ]
+            },
+            pcbs: {
+                board: {
+                    outlines: { board: { outline: 'box' } },
+                    footprints: [
+                        { what: 'my_custom_footprint', where: true }
+                    ]
+                }
+            }
+        }
+
+        const result = await ergogen.process(config)
+        result.pcbs.board.should.contain('custom-footprint-body')
+    })
+
+    it('should allow injecting templates', async function() {
+        const template = {
+            convert_outline: () => {},
+            body: () => 'custom-template-body'
+        }
+        ergogen.inject('template', 'my_custom_template', template)
+
+        const config = {
+            points: { zones: { matrix: { columns: { pos: { key: { x: 0, y: 0 } } } } } },
+            outlines: {
+                box: [
+                    { what: 'rectangle', size: 20 }
+                ]
+            },
+            pcbs: {
+                board: {
+                    template: 'my_custom_template',
+                    outlines: { board: { outline: 'box' } }
+                }
+            }
+        }
+
+        const result = await ergogen.process(config)
+        result.pcbs.board.should.equal('custom-template-body')
+    })
+
+    it('should default to footprint injection when using the 2-argument signature', async function() {
+        const footprint = {
+            params: {},
+            body: () => 'shorthand-footprint-body'
+        }
+        // Utilizing the 2-argument overload: (name, value) => defaults to 'footprint'
+        ergogen.inject('shorthand_footprint', footprint)
+
+        const config = {
+            points: { zones: { matrix: { columns: { pos: { key: { x: 0, y: 0 } } } } } },
+            outlines: {
+                box: [
+                    { what: 'rectangle', size: 20 }
+                ]
+            },
+            pcbs: {
+                board: {
+                    outlines: { board: { outline: 'box' } },
+                    footprints: [
+                        { what: 'shorthand_footprint', where: true }
+                    ]
+                }
+            }
+        }
+
+        const result = await ergogen.process(config)
+        result.pcbs.board.should.contain('shorthand-footprint-body')
+    })
+
+    it('should overwrite existing injections on duplicate register calls', async function() {
+        const first_footprint = {
+            params: {},
+            body: () => 'first-footprint-body'
+        }
+        const second_footprint = {
+            params: {},
+            body: () => 'second-footprint-body'
+        }
+        ergogen.inject('footprint', 'overwrite_footprint', first_footprint)
+        ergogen.inject('footprint', 'overwrite_footprint', second_footprint)
+
+        const config = {
+            points: { zones: { matrix: { columns: { pos: { key: { x: 0, y: 0 } } } } } },
+            outlines: {
+                box: [
+                    { what: 'rectangle', size: 20 }
+                ]
+            },
+            pcbs: {
+                board: {
+                    outlines: { board: { outline: 'box' } },
+                    footprints: [
+                        { what: 'overwrite_footprint', where: true }
+                    ]
+                }
+            }
+        }
+
+        const result = await ergogen.process(config)
+        result.pcbs.board.should.contain('second-footprint-body')
+        result.pcbs.board.should.not.contain('first-footprint-body')
+    })
 })
 
 describe('IO', function() {
