@@ -207,16 +207,16 @@ exports.parse = (config, points, outlines, units) => {
             pcb_config.footprints = {...pcb_config.footprints}
         }
         const footprints_config = a.sane(pcb_config.footprints || {}, `pcbs.${pcb_name}.footprints`, 'object')()
-        for (const [f_name, f] of Object.entries(footprints_config)) {
+        for (const [f_name, f_orig] of Object.entries(footprints_config)) {
+            let f = f_orig
             const name = `pcbs.${pcb_name}.footprints.${f_name}`
             a.sane(f, name, 'object')()
             const asym = a.asym(f.asym || 'source', `${name}.asym`)
             const where = filter(f.where, `${name}.where`, points, units, asym)
             const original_adjust = f.adjust // need to save, so the delete's don't get rid of it below
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(units)
-            delete f.asym
-            delete f.where
-            delete f.adjust
+            const {asym: _asym, where: _where, adjust: _adjust, ...rest} = f
+            f = rest
             for (const w of where) {
                 const aw = adjust(w.clone())
                 footprints.push(footprint_factory(f, name, aw))

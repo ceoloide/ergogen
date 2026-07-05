@@ -350,7 +350,8 @@ exports.parse = (config, points, units) => {
         }
         parts = a.sane(parts, `outlines.${outline_name}`, 'object')()
         
-        for (let [part_name, part] of Object.entries(parts)) {
+        for (let [part_name, part_orig] of Object.entries(parts)) {
+            let part = part_orig
             
             const name = `outlines.${outline_name}.${part_name}`
 
@@ -378,16 +379,12 @@ exports.parse = (config, points, units) => {
             const scale = a.sane(part.scale || 1, `${name}.scale`, 'number')(units)
 
             // these keys are then removed, so ops can check their own unexpected keys without interference
-            delete part.operation
-            delete part.what
-            delete part.bound
-            delete part.asym
-            delete part.where
-            delete part.adjust
-            delete part.fillet
-            delete part.expand
-            delete part.joints
-            delete part.scale
+            const {
+                operation: _op, what: _what, bound: _bound, asym: _asym, where: _where,
+                adjust: _adjust, fillet: _fillet, expand: _expand, joints: _joints, scale: _scale,
+                ...rest
+            } = part
+            part = rest
 
             // a prototype "shape" maker (and its units) are computed
             const [shape_maker, shape_units] = whats[what](part, name, points, outlines, units)
