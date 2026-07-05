@@ -306,10 +306,14 @@ const path = (config, name, points, outlines, units) => {
 }
 
 const svg = (config, name, points, outlines, units) => {
-    a.unexpected(config, name, ['paths', 'accuracy'])
+    a.unexpected(config, name, ['paths', 'accuracy', 'flip_horizontally', 'flip_vertically', 'origin'])
     let paths_raw = config.paths
     const accuracy = a.sane(config.accuracy || 0.0001, `${name}.accuracy`, 'number')(units)
     a.assert(accuracy !== 0, `Accuracy for SVG outline "${name}" cannot be 0!`)
+
+    const flip_horizontally = a.sane(config.flip_horizontally || false, `${name}.flip_horizontally`, 'boolean')(units)
+    const flip_vertically = a.sane(config.flip_vertically || false, `${name}.flip_vertically`, 'boolean')(units)
+    const origin = a.xy(config.origin || [0, 0], `${name}.origin`)(units)
 
     a.assert(paths_raw, `The "paths" field must be provided for SVG outline "${name}"!`)
 
@@ -336,6 +340,14 @@ const svg = (config, name, points, outlines, units) => {
         }
         let shape = combined
         shape = m.model.mirror(shape, false, true)
+
+        if (origin[0] !== 0 || origin[1] !== 0) {
+            shape = m.model.moveRelative(shape, [-origin[0], -origin[1]])
+        }
+
+        if (flip_horizontally || flip_vertically) {
+            shape = m.model.mirror(shape, flip_horizontally, flip_vertically)
+        }
 
         const chains = m.model.findChains(shape)
         a.assert(chains.length > 0, `SVG outline "${name}" does not contain any valid paths!`)
