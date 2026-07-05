@@ -5,6 +5,7 @@ const makerjs = require('makerjs')
 const u = require('./utils')
 const a = require('./assert')
 const kle = require('./kle')
+const svg_helper = require('./svg_helper')
 
 const package_json = require('../package.json')
 
@@ -53,44 +54,27 @@ exports.unpack = async (zip) => {
 
     // bundled outlines
     const ots = zip.folder('outlines')
-    for (const ot of ots.file(/.*\.svg$/)) {
-        const name = ot.name.slice('outlines/'.length).replace(/\.svg$/, '')
+    for (const ot of ots.file(/.*\.(svg|js)$/)) {
+        const name = ot.name.slice('outlines/'.length).replace(/\.(svg|js)$/, '')
         const text = await ot.async('string')
-        // Simple SVG path extraction for now
-        const paths = []
-        const pathRegex = /<path[\s\S]*?\sd=["']([\s\S]*?)["']/gi
-        let match
-        while ((match = pathRegex.exec(text)) !== null) {
-            paths.push(match[1])
+        if (ot.name.endsWith('.js')) {
+            const parsed = new Function('require', module_prefix + text + module_suffix)(fake_require(name))
+            injections.push(['outline', name, parsed])
+        } else {
+            // Simple SVG path extraction
+            const paths = []
+            const pathRegex = /<path[\s\S]*?\sd=["']([\s\S]*?)["']/gi
+            let match
+            while ((match = pathRegex.exec(text)) !== null) {
+                paths.push(match[1])
+            }
+
+            const svg_injected = (config, name, points, outlines, units) => {
+                return svg_helper.svg_paths_to_outline(paths, config, name, points, outlines, units)
+            }
+
+            injections.push(['outline', name, svg_injected])
         }
-
-        const svg_injected = (config, name, points, outlines, units) => {
-            return [point => {
-                let combined = undefined
-                paths.forEach((p) => {
-                    const imported = makerjs.importer.fromSVGPathData(p)
-                    if (combined === undefined) {
-                        combined = imported
-                    } else {
-                        combined = u.union(combined, imported)
-                        makerjs.model.simplify(combined)
-                    }
-                })
-                if (point.meta.mirrored) {
-
-                    combined = makerjs.model.mirror(combined, true, false)
-
-                }
-
-                combined = makerjs.model.mirror(combined, false, true)
-                const bbox = makerjs.measure.modelExtents(combined)
-
-                return [combined, {low: bbox.low, high: bbox.high}]
-
-            }, units]
-        }
-
-        injections.push(['outline', name, svg_injected])
     }
 
     return [config_text, injections]

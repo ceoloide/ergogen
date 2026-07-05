@@ -8,6 +8,7 @@ const anchor = require('./anchor').parse
 const filter = require('./filter').parse
 const injected_outlines = require('./outlines/index')
 const hulljs = require('hull')
+const svg_helper = require('./svg_helper')
 
 const binding = (base, bbox, point, units) => {
 
@@ -306,61 +307,7 @@ const path = (config, name, points, outlines, units) => {
 }
 
 const svg = (config, name, points, outlines, units) => {
-    a.unexpected(config, name, ['paths', 'accuracy', 'flip_horizontally', 'flip_vertically', 'origin'])
-    let paths_raw = config.paths
-    const accuracy = a.sane(config.accuracy || 0.0001, `${name}.accuracy`, 'number')(units)
-    a.assert(accuracy !== 0, `Accuracy for SVG outline "${name}" cannot be 0!`)
-
-    const flip_horizontally = a.sane(config.flip_horizontally || false, `${name}.flip_horizontally`, 'boolean')(units)
-    const flip_vertically = a.sane(config.flip_vertically || false, `${name}.flip_vertically`, 'boolean')(units)
-    const origin = a.xy(config.origin || [0, 0], `${name}.origin`)(units)
-
-    a.assert(paths_raw, `The "paths" field must be provided for SVG outline "${name}"!`)
-
-    return [point => {
-        let paths = []
-        if (a.type(paths_raw)() == 'string') {
-            paths = [paths_raw]
-        } else if (a.type(paths_raw)() == 'array') {
-            paths = paths_raw
-        } else {
-            a.assert(false, `Field "paths" for SVG outline "${name}" must be a string or an array!`)
-        }
-
-        let combined = undefined
-        for (const [i, p] of paths.entries()) {
-            a.assert(a.type(p)() == 'string', `Path ${i} for SVG outline "${name}" must be a string!`)
-            const imported = m.importer.fromSVGPathData(p, accuracy)
-            if (combined === undefined) {
-                combined = imported
-            } else {
-                combined = u.union(combined, imported)
-                m.model.simplify(combined)
-            }
-        }
-        let shape = combined
-        shape = m.model.mirror(shape, false, true)
-
-        if (origin[0] !== 0 || origin[1] !== 0) {
-            shape = m.model.moveRelative(shape, [-origin[0], -origin[1]])
-        }
-
-        if (flip_horizontally || flip_vertically) {
-            shape = m.model.mirror(shape, flip_horizontally, flip_vertically)
-        }
-
-        const chains = m.model.findChains(shape)
-        a.assert(chains.length > 0, `SVG outline "${name}" does not contain any valid paths!`)
-        for (const chain of chains) {
-            a.assert(chain.endless, `SVG paths need to be closed shapes (check failed for "${name}")`)
-        }
-
-        if (point.meta.mirrored) {
-            shape = m.model.mirror(shape, true, false)
-        }
-        const bbox = m.measure.modelExtents(shape)
-        return [shape, {low: bbox.low, high: bbox.high}]
-    }, units]
+    return svg_helper.svg_paths_to_outline(config.paths, config, name, points, outlines, units)
 }
 
 const whats = {

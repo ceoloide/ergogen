@@ -179,7 +179,7 @@ describe('Internals', function() {
 })
 
 describe('IO', function() {
-    it('should unpack outlines from zip with multiple paths and mirroring', async function() {
+    it('should unpack outlines from zip with multiple paths, mirroring, and JS outlines', async function() {
         const mockZip = {
             file: function(regex) {
                 if (regex.toString().includes('config')) {
@@ -191,10 +191,16 @@ describe('IO', function() {
                 if (name === 'outlines') {
                     return {
                         file: function(regex) {
-                            return [{
-                                name: 'outlines/test.svg',
-                                async: () => Promise.resolve('<svg><path d="M 0 0 L 10 0 L 10 10 Z" /><path d="M 20 20 L 30 20 L 30 30 Z" /></svg>')
-                            }]
+                            return [
+                                {
+                                    name: 'outlines/test.svg',
+                                    async: () => Promise.resolve('<svg><path d="M 0 0 L 10 0 L 10 10 Z" /><path d="M 20 20 L 30 20 L 30 30 Z" /></svg>')
+                                },
+                                {
+                                    name: 'outlines/testjs.js',
+                                    async: () => Promise.resolve('module.exports = (config, name, points, outlines, units) => [() => [{}, {low: [0,0], high: [10,10]}], units]')
+                                }
+                            ]
                         }
                     }
                 }
@@ -203,11 +209,17 @@ describe('IO', function() {
         }
 
         const [config, injections] = await io.unpack(mockZip)
-        injections.should.have.lengthOf(1)
+        injections.should.have.lengthOf(2)
+        
+        // SVG outline assertion
         injections[0][0].should.equal('outline')
         injections[0][1].should.equal('test')
 
-        // Verify the injected function works with multiple paths
+        // JS outline assertion
+        injections[1][0].should.equal('outline')
+        injections[1][1].should.equal('testjs')
+
+        // Verify the SVG outline injected function works with multiple paths
         const shapeMaker = injections[0][2]
         const [maker, units] = shapeMaker({}, 'test', {}, {}, {})
 
@@ -218,5 +230,11 @@ describe('IO', function() {
         // Test mirrored (covers io.js:81)
         const [mirroredShape, mirroredBbox] = maker({ meta: { mirrored: true } })
         mirroredShape.should.exist
+        
+        // Verify the JS outline injected function works
+        const jsShapeMaker = injections[1][2]
+        const [jsMaker, jsUnits] = jsShapeMaker({}, 'testjs', {}, {}, {})
+        const [jsShape, jsBbox] = jsMaker({ meta: {} })
+        jsShape.should.exist
     })
 })
