@@ -400,29 +400,51 @@ exports.parse = (config, points, units) => {
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
             // and then the shape is repeated for all where positions
-            for (const w of where(shape_units)) {
-                const point = adjust(w.clone())
-                let [shape, bbox] = shape_maker(point) // point is passed for mirroring metadata only...
-                if (bound) {
-                    shape = binding(shape, bbox, point, shape_units)
+            // and then the shape is repeated for all where positions
+            const needs_combined = scale !== 1 || expand || fillet
+            const where_list = where(shape_units)
+            if (!needs_combined) {
+                for (const w of where_list) {
+                    const point = adjust(w.clone()) // point is passed for mirroring metadata only...
+                    let [shape, bbox] = shape_maker(point)
+                    if (bound) {
+                        shape = binding(shape, bbox, point, shape_units)
+                    }
+                    shape = point.position(shape) // ...actual positioning happens here
+                    outlines[outline_name] = operation(outlines[outline_name], shape)
                 }
-                shape = point.position(shape) // ...actual positioning happens here
-                outlines[outline_name] = operation(outlines[outline_name], shape)
-            }
+            } else {
+                let part_model = {models: {}}
+                let part_count = 0
+                for (const w of where_list) {
+                    const point = adjust(w.clone()) // point is passed for mirroring metadata only...
+                    let [shape, bbox] = shape_maker(point)
+                    if (bound) {
+                        shape = binding(shape, bbox, point, shape_units)
+                    }
+                    shape = point.position(shape) // ...actual positioning happens here
+                    part_model.models["p" + (++part_count)] = shape
+                }
 
-            if (scale !== 1) {
-                outlines[outline_name] = m.model.scale(outlines[outline_name], scale)
-            }
-    
-            if (expand) {
-                outlines[outline_name] = m.model.outline(
-                    outlines[outline_name], Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
-                )
-            }
+                if (part_count > 0) {
+                    if (scale !== 1) {
+                        part_model = m.model.scale(part_model, scale)
+                    }
 
-            if (fillet) {
-                for (const [index, chain] of m.model.findChains(outlines[outline_name]).entries()) {
-                    outlines[outline_name].models[`fillet_${part_name}_${index}`] = m.chain.fillet(chain, fillet)
+                    if (expand) {
+                        part_model = m.model.outline(
+                            part_model, Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
+                        )
+                    }
+
+                    if (fillet) {
+                        for (const [index, chain] of m.model.findChains(part_model).entries()) {
+                            if (!part_model.models) part_model.models = {}
+                            part_model.models[`fillet_${part_name}_${index}`] = m.chain.fillet(chain, fillet)
+                        }
+                    }
+
+                    outlines[outline_name] = operation(outlines[outline_name], part_model)
                 }
             }
         }
