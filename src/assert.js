@@ -42,12 +42,21 @@ const _in = exports.in = (raw, name, arr) => {
 const arr = exports.arr = (raw, name, length, _type, _default) => units => {
     assert(type(raw)(units) == 'array', `Field "${name}" should be an array!`)
     assert(length == 0 || raw.length == length, `Field "${name}" should be an array of length ${length}!`)
-    raw = raw.map(val => val === undefined ? _default : val)
-    raw.map(val => assert(type(val)(units) == _type, `Field "${name}" should contain ${_type}s!`))
-    if (_type == 'number') {
-        raw = raw.map(val => mathnum(val)(units))
-    }
-    return raw
+    return raw.map(val => {
+        const v = val === undefined ? _default : val
+        if (_type == 'number') {
+            let res
+            try {
+                res = mathnum(v)(units)
+            } catch (err) {
+                assert(false, `Field "${name}" should contain ${_type}s!`)
+            }
+            assert(typeof res == 'number', `Field "${name}" should contain ${_type}s!`)
+            return res
+        }
+        assert(type(v)(units) == _type, `Field "${name}" should contain ${_type}s!`)
+        return v
+    })
 }
 
 const numarr = exports.numarr = (raw, name, length) => units => arr(raw, name, length, 'number', 0)(units)
