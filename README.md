@@ -74,6 +74,41 @@ Until there's a proper "Getting started" guide, try getting acquainted with **Er
 
 <br>
 
+## Trigonometry solvers
+
+Every number in a config can be a math expression, and two triangle solvers from MakerJS are available within them, to help derive dimensions for complex outlines like gussets, angled bridges, V notches or thumb fans.
+All angles are in degrees, and both solvers return the value opposite their first argument.
+
+| Function | Returns |
+| --- | --- |
+| `triangle_sss(opposite_side, side, other_side)` | the angle opposite `opposite_side`, given all three sides |
+| `triangle_asa(opposite_angle, side, other_angle)` | the length opposite `opposite_angle`, given the `side` between the two angles |
+
+```yaml
+units:
+  pitch: 21
+  radius: 80
+  # the splay between thumb keys 21mm apart on an 80mm radius
+  step: triangle_sss(pitch, radius, radius)
+points.zones.matrix: {}
+outlines:
+  notch:
+    - what: polygon
+      points:
+        - shift: [0, 0]
+        - shift: [30, 0]
+        # quote formulas with commas inside flow arrays
+        - orient: 105
+          shift: ["triangle_asa(75, 30, 75)", 0]
+```
+
+Results are always positive, so apply the direction (like `-step` for a splay) yourself.
+Arguments must be positive finite numbers that form a valid triangle, and triangles too thin to resolve numerically are rejected with an error.
+Naming the inputs in `units` keeps the formulas readable.
+See [`test/outlines/solvers.yaml`](test/outlines/solvers.yaml) for a commented example.
+
+<br>
+
 ## Contributions
 
 Feature ideas, documentation improvements, examples, tests, or pull requests welcome!
