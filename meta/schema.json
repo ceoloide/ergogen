@@ -147,22 +147,23 @@
             "enum": ["both", "source", "origin", "base", "primary", "left", "clone", "image", "derived", "secondary", "right"]
         },
         "units": {
+            "description": "Unit values, merged onto the defaults (null keeps the default)",
             "type": ["object", "null"],
             "properties": {
-                "U": {"$ref": "#/definitions/number"},
-                "u": {"$ref": "#/definitions/number"},
-                "cx": {"$ref": "#/definitions/number"},
-                "cy": {"$ref": "#/definitions/number"},
-                "$default_stagger": {"$ref": "#/definitions/number"},
-                "$default_spread": {"$ref": "#/definitions/number"},
-                "$default_splay": {"$ref": "#/definitions/number"},
-                "$default_height": {"$ref": "#/definitions/number"},
-                "$default_width": {"$ref": "#/definitions/number"},
-                "$default_padding": {"$ref": "#/definitions/number"},
-                "$default_autobind": {"$ref": "#/definitions/number"}
+                "U": {"$ref": "#/definitions/nullable_number"},
+                "u": {"$ref": "#/definitions/nullable_number"},
+                "cx": {"$ref": "#/definitions/nullable_number"},
+                "cy": {"$ref": "#/definitions/nullable_number"},
+                "$default_stagger": {"$ref": "#/definitions/nullable_number"},
+                "$default_spread": {"$ref": "#/definitions/nullable_number"},
+                "$default_splay": {"$ref": "#/definitions/nullable_number"},
+                "$default_height": {"$ref": "#/definitions/nullable_number"},
+                "$default_width": {"$ref": "#/definitions/nullable_number"},
+                "$default_padding": {"$ref": "#/definitions/nullable_number"},
+                "$default_autobind": {"$ref": "#/definitions/nullable_number"}
             },
             "additionalProperties": {
-                "$ref": "#/definitions/number"
+                "$ref": "#/definitions/nullable_number"
             }
         },
         "anchor": {
@@ -184,6 +185,9 @@
         },
         "anchor_object": {
             "type": "object",
+            "not": {
+                "required": ["ref", "aggregate"]
+            },
             "properties": {
                 "ref": {
                     "description": "Point to start from (cannot be combined with \"aggregate\")",
@@ -253,13 +257,16 @@
             ]
         },
         "mirror": {
-            "description": "Mirror axis: an x coordinate, or an anchor (with an optional distance) whose x is used",
+            "description": "Mirror axis: a literal x coordinate, or an anchor (with an optional distance) whose x is used. Math expressions only work within the anchor form",
             "anyOf": [
                 {
-                    "$ref": "#/definitions/number"
+                    "type": "number"
                 },
                 {
                     "type": "object",
+                    "not": {
+                        "required": ["ref", "aggregate"]
+                    },
                     "properties": {
                         "ref": {"$ref": "#/definitions/anchor_object/properties/ref"},
                         "aggregate": {"$ref": "#/definitions/anchor_object/properties/aggregate"},
@@ -278,7 +285,18 @@
             ]
         },
         "filter": {
-            "description": "Where to place something: true/false for all/no points, a name/tag condition (\"-\" negates, /regex/flags allowed, \"meta.key ~ value\" for other fields), a nested list alternating OR/AND, or an anchor object",
+            "description": "Where to place something: a condition on the points, or an anchor (any object, even nested in a list, turns the whole value into an anchor)",
+            "anyOf": [
+                {
+                    "$ref": "#/definitions/filter_condition"
+                },
+                {
+                    "$ref": "#/definitions/anchor"
+                }
+            ]
+        },
+        "filter_condition": {
+            "description": "true/false for all/no points, a name/tag condition (\"-\" negates, /regex/flags allowed, \"meta.key ~ value\" for other fields), or a nested list alternating OR/AND",
             "anyOf": [
                 {
                     "type": "boolean"
@@ -289,11 +307,8 @@
                 {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/filter"
+                        "$ref": "#/definitions/filter_condition"
                     }
-                },
-                {
-                    "$ref": "#/definitions/anchor_object"
                 }
             ]
         },
@@ -335,7 +350,7 @@
             "properties": {
                 "rows": {
                     "description": "Column-specific rows and row overrides",
-                    "$ref": "#/definitions/rows"
+                    "$ref": "#/definitions/column_rows"
                 },
                 "key": {
                     "description": "Column-level key defaults",
@@ -345,6 +360,12 @@
             "additionalProperties": false
         },
         "rows": {
+            "type": ["object", "null"],
+            "additionalProperties": {
+                "$ref": "#/definitions/key"
+            }
+        },
+        "column_rows": {
             "type": ["object", "null"],
             "additionalProperties": {
                 "anyOf": [
@@ -364,53 +385,53 @@
             "properties": {
                 "stagger": {
                     "description": "Vertical shift of the column relative to the previous one (read from the first key of the column)",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "spread": {
                     "description": "Horizontal distance from the previous column (read from the first key of the column)",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "splay": {
                     "description": "Column rotation, cumulative for later columns (read from the first key of the column)",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "origin": {
                     "description": "Splay origin, relative to the first key of the column",
-                    "$ref": "#/definitions/key_xy"
+                    "$ref": "#/definitions/nullable_xy"
                 },
                 "orient": {
                     "description": "Rotation before shifting, carried over to later keys of the column",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "shift": {
                     "description": "Translation, carried over to later keys of the column",
-                    "$ref": "#/definitions/key_xy"
+                    "$ref": "#/definitions/nullable_xy"
                 },
                 "rotate": {
                     "description": "Rotation after shifting, carried over to later keys of the column",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "adjust": {
                     "description": "Independent adjustment of this key only, as an anchor relative to its position",
                     "anyOf": [{"$ref": "#/definitions/anchor"}, {"type": "null"}]
                 },
                 "width": {
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "height": {
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "padding": {
                     "description": "Vertical distance to the next key in the column",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "autobind": {
                     "description": "Default bind distance towards neighboring keys (0 disables)",
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 "bind": {
                     "description": "Explicit bind distances for bound outlines, overriding autobind where non-negative",
-                    "$ref": "#/definitions/key_trbl"
+                    "$ref": "#/definitions/nullable_trbl"
                 },
                 "skip": {
                     "description": "Helper point, removed from the output",
@@ -438,28 +459,28 @@
                 }
             }
         },
-        "key_number": {
-            "description": "A number, a math expression string, or null to keep the inherited value",
+        "nullable_number": {
+            "description": "A number, a math expression string, or null to keep the inherited (or default) value",
             "type": ["number", "string", "null"]
         },
-        "key_xy": {
-            "description": "An [x, y] pair. Arrays are extended element-wise, so shorter arrays keep the inherited elements",
-            "type": "array",
+        "nullable_xy": {
+            "description": "An [x, y] pair, or null to keep the inherited value. Arrays are extended element-wise, so shorter arrays keep the inherited elements",
+            "type": ["array", "null"],
             "items": {
-                "$ref": "#/definitions/key_number"
+                "$ref": "#/definitions/nullable_number"
             },
             "maxItems": 2
         },
-        "key_trbl": {
+        "nullable_trbl": {
             "description": "A single number for all sides, a [vertical, horizontal] pair, or a [top, right, bottom, left] quadruplet. Arrays are extended element-wise, so shorter arrays keep the inherited elements",
             "anyOf": [
                 {
-                    "$ref": "#/definitions/key_number"
+                    "$ref": "#/definitions/nullable_number"
                 },
                 {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/key_number"
+                        "$ref": "#/definitions/nullable_number"
                     },
                     "maxItems": 4
                 }
@@ -864,24 +885,49 @@
             "required": ["what"],
             "additionalProperties": false,
             "allOf": [
-                {"if": {"properties": {"what": {"const": "alps"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_alps"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "button"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_button"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "choc"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_choc"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "chocmini"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_chocmini"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "diode"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_diode"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "jstph"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_jstph"}], "required": ["pos", "neg"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "jumper"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_jumper"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "mx"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_mx"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "oled"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_oled"}], "required": ["SDA", "SCL"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "omron"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_omron"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "pad"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_pad"}], "required": ["net"]}}, "required": ["params"]}},
+                {"if": {"properties": {"what": {"const": "alps"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_alps"}}}},
+                {"if": {"properties": {"what": {"const": "button"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_button"}}}},
+                {"if": {"properties": {"what": {"const": "choc"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_choc"}}}},
+                {"if": {"properties": {"what": {"const": "chocmini"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_chocmini"}}}},
+                {"if": {"properties": {"what": {"const": "diode"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_diode"}}}},
+                {"if": {"properties": {"what": {"const": "jstph"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_jstph"}}}},
+                {"if": {"properties": {"what": {"const": "jumper"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_jumper"}}}},
+                {"if": {"properties": {"what": {"const": "mx"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_mx"}}}},
+                {"if": {"properties": {"what": {"const": "oled"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_oled"}}}},
+                {"if": {"properties": {"what": {"const": "omron"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_omron"}}}},
+                {"if": {"properties": {"what": {"const": "pad"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_pad"}}}},
                 {"if": {"properties": {"what": {"const": "promicro"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_promicro"}}}},
-                {"if": {"properties": {"what": {"const": "rgb"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_rgb"}], "required": ["din", "dout"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "rotary"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_rotary"}], "required": ["from", "to", "A", "B", "C"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "scrollwheel"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_scrollwheel"}], "required": ["from", "to", "A", "B", "C", "D"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "slider"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_slider"}], "required": ["from", "to"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "trrs"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_trrs"}], "required": ["A", "B", "C", "D"]}}, "required": ["params"]}},
-                {"if": {"properties": {"what": {"const": "via"}}}, "then": {"properties": {"params": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_via"}], "required": ["net"]}}, "required": ["params"]}}
+                {"if": {"properties": {"what": {"const": "rgb"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_rgb"}}}},
+                {"if": {"properties": {"what": {"const": "rotary"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_rotary"}}}},
+                {"if": {"properties": {"what": {"const": "scrollwheel"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_scrollwheel"}}}},
+                {"if": {"properties": {"what": {"const": "slider"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_slider"}}}},
+                {"if": {"properties": {"what": {"const": "trrs"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_trrs"}}}},
+                {"if": {"properties": {"what": {"const": "via"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_via"}}}},
+                {
+                    "description": "Nets without a default are required, unless the footprint is never placed",
+                    "if": {"properties": {"where": {"const": false}}, "required": ["where"]},
+                    "else": {
+                        "allOf": [
+                            {"if": {"properties": {"what": {"const": "alps"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_alps"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "button"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_button"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "choc"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_choc"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "chocmini"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_chocmini"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "diode"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_diode"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "jstph"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_jstph"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "jumper"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_jumper"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "mx"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_mx"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "oled"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_oled"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "omron"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_omron"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "pad"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_pad"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "rgb"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_rgb"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "rotary"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_rotary"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "scrollwheel"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_scrollwheel"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "slider"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_slider"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "trrs"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_trrs"}}, "required": ["params"]}},
+                            {"if": {"properties": {"what": {"const": "via"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_via"}}, "required": ["params"]}}
+                        ]
+                    }
+                }
             ]
         },
         "footprint_param_string": {
@@ -893,12 +939,155 @@
             "$ref": "#/definitions/number"
         },
         "footprint_param_boolean": {
-            "description": "Boolean footprint parameter, or a string (template) that resolves to \"true\" or 1",
-            "type": ["boolean", "string"]
+            "description": "Boolean footprint parameter, a number (used for its truthiness), or a string (template) that resolves to \"true\" or 1",
+            "type": ["boolean", "string", "number"]
         },
         "footprint_param_net": {
             "description": "Net name",
             "type": "string"
+        },
+        "footprint_nets_alps": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_button": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_choc": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_chocmini": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_diode": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_jstph": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["pos"]}, {"properties": {"mirror": {"type": "object", "required": ["pos"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["neg"]}, {"properties": {"mirror": {"type": "object", "required": ["neg"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_jumper": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_mx": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_oled": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["SDA"]}, {"properties": {"mirror": {"type": "object", "required": ["SDA"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["SCL"]}, {"properties": {"mirror": {"type": "object", "required": ["SCL"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_omron": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_pad": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["net"]}, {"properties": {"mirror": {"type": "object", "required": ["net"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_rgb": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["din"]}, {"properties": {"mirror": {"type": "object", "required": ["din"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["dout"]}, {"properties": {"mirror": {"type": "object", "required": ["dout"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_rotary": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_scrollwheel": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["D"]}, {"properties": {"mirror": {"type": "object", "required": ["D"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_slider": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_trrs": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]},
+                {"anyOf": [{"required": ["D"]}, {"properties": {"mirror": {"type": "object", "required": ["D"]}}, "required": ["mirror"]}]}
+            ]
+        },
+        "footprint_nets_via": {
+            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
+            "type": "object",
+            "allOf": [
+                {"anyOf": [{"required": ["net"]}, {"properties": {"mirror": {"type": "object", "required": ["net"]}}, "required": ["mirror"]}]}
+            ]
         },
         "footprint_params_alps": {
             "type": "object",

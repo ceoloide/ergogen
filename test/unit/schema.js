@@ -14,8 +14,8 @@ const root = path.join(__dirname, '..', '..')
 
 describe('Schema', function() {
 
-    this.timeout(120000)
-    this.slow(120000)
+    this.timeout(30000)
+    this.slow(10000)
 
     // strictRequired would flag params that are required next to an allOf $ref
     const validate = new Ajv({strict: true, allowUnionTypes: true, strictRequired: false, allErrors: true}).compile(schema)
@@ -59,7 +59,7 @@ describe('Schema', function() {
     it('accepts every documented feature', async function() {
         const features = {
             meta: {engine: '4.0', version: 'v1.2.3', author: 'Tester'},
-            units: {kx: 'u + 1'},
+            units: {kx: 'u + 1', cy: null},
             variables: {ky: 'kx - 1', $default_autobind: 5},
             points: {
                 zones: {
@@ -96,7 +96,7 @@ describe('Schema', function() {
                         key: {width: 20, height: 18}
                     }
                 },
-                key: {autobind: 3},
+                key: {autobind: 3, origin: null, shift: null},
                 rotate: 0,
                 mirror: {ref: 'matrix_pinkytop', distance: 200}
             },
@@ -113,7 +113,8 @@ describe('Schema', function() {
                         {type: 'line', points: [{shift: [10, 10]}, {shift: [-20, 0]}]},
                         {type: 'bezier', points: [{shift: [-5, 10]}, {shift: [25, -10]}], accuracy: 1}
                     ]},
-                    copy: {what: 'outline', name: 'keys', origin: 'matrix_pinkybottom', operation: 'intersect', fillet: 0.5, scale: 1.1}
+                    copy: {what: 'outline', name: 'keys', origin: 'matrix_pinkybottom', operation: 'intersect', fillet: 0.5, scale: 1.1},
+                    dot: {what: 'circle', radius: 1, where: ['matrix_pinkybottom', {shift: [1, 0]}]}
                 },
                 grown: ['keys', {name: 'keys', expand: '2]'}, {name: 'keys', expand: 1, joints: 'round'}, '-shapes']
             },
@@ -130,8 +131,10 @@ describe('Schema', function() {
                     footprints: {
                         switches: {
                             what: 'mx', where: true, asym: 'both', adjust: {rotate: 180},
-                            params: {hotswap: true, from: '{{colrow}}', to: 'GND', mirror: {reverse: 'true'}}
+                            params: {hotswap: 1, from: '{{colrow}}', to: 'GND', mirror: {reverse: 'true'}}
                         },
+                        mirrored_via: {what: 'via', where: 'matrix_pinkybottom', asym: 'clone', params: {mirror: {net: 'GND'}}},
+                        unplaced: {what: 'mx', where: false},
                         mcu: {what: 'promicro', where: {ref: 'matrix_pinkybottom', shift: [0, 30]}, params: {orientation: 'up'}},
                         pad: {what: 'pad', params: {width: 'u / 10', mirrored: false, net: 'GND'}}
                     }
@@ -151,7 +154,7 @@ describe('Schema', function() {
             outlines: {box: [{what: 'rectangle', where: true, size: 18}]}
         }
         const shift = x => ({shift: [x, 0]})
-        // [config patch, engine error snippet, schema violation path]
+        // [config patch (or a function changing the base), engine error snippet, schema violation path]
         const invalid = [
             // meta, units and points
             [{meta: {engine: 'four'}}, 'Invalid semver', '/meta/engine'],
@@ -167,10 +170,14 @@ describe('Schema', function() {
             [{points: {key: {orient: {ref: 'matrix_one_only'}}}}, 'should be of type number', '/points/key/orient'],
             [{points: {key: {bind: [1, 2, 3, 4, 5]}}}, 'should be an array of length 4', '/points/key/bind'],
             [{points: {mirror: {ref: 'matrix_one_only', foo: 1}}}, 'Unexpected key "foo"', '/points/mirror'],
+            [{points: {mirror: {ref: 'matrix_one_only', aggregate: {parts: []}}}}, 'cannot appear together', '/points/mirror'],
+            // a patch would apply $unset itself, so it is set directly
+            [c => u.deep(c, 'points.zones.matrix.rows.only', '$unset'), 'should be of type number', '/points/zones/matrix/rows/only'],
             // anchors
             [{points: {zones: {matrix: {anchor: {foo: 1}}}}}, 'Unexpected key "foo"', '/points/zones/matrix/anchor'],
             [{points: {zones: {matrix: {anchor: {aggregate: {method: 'median'}}}}}}, 'Unknown aggregator method', '/points/zones/matrix/anchor'],
             [{points: {zones: {matrix: {anchor: {shift: [1, 1], affect: 'xz'}}}}}, 'should be one of', '/points/zones/matrix/anchor'],
+            [{points: {zones: {matrix: {anchor: {ref: 'matrix_one_only', aggregate: {parts: []}}}}}}, 'cannot appear together', '/points/zones/matrix/anchor'],
             // outlines
             [{outlines: {bad: [{what: 'square'}]}}, 'should be one of', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'rectangle', size: 5, radius: 5}]}}, 'Unexpected key "radius"', '/outlines/bad/0'],
@@ -178,6 +185,7 @@ describe('Schema', function() {
             [{outlines: {bad: [{what: 'outline'}]}}, 'does not name an existing outline', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'circle', radius: 5, operation: 'union'}]}}, 'should be one of', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'circle', radius: 5, expand: 1, joints: 3}]}}, 'should be one of', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, where: [true, shift(1)]}]}}, 'should be of type object', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'hull', points: ['matrix_one_only'], extend: 'yes'}]}}, 'should be of type boolean', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'path', segments: [{type: 'spline', points: [shift(0), shift(10)]}]}]}}, 'should be one of', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'path', segments: [{type: 'line', points: [shift(0), shift(10)], accuracy: 1}]}]}}, 'Unexpected key "accuracy"', '/outlines/bad/0'],
@@ -207,17 +215,45 @@ describe('Schema', function() {
 
         const mismatches = []
         for (const [patch, snippet, where] of invalid) {
-            const config = prep.extend(base, patch)
+            const is_fn = typeof patch == 'function'
+            const config = is_fn ? patch(u.deepcopy(base)) : prep.extend(base, patch)
+            const label = is_fn ? patch.toString() : JSON.stringify(patch)
             const error = await engine_error(config)
             if (!error.includes(snippet)) {
-                mismatches.push(`${JSON.stringify(patch)}: engine error "${error}" does not include "${snippet}"`)
+                mismatches.push(`${label}: engine error "${error}" does not include "${snippet}"`)
             }
             const errors = violations(config)
             if (!errors.some(e => e.startsWith(where))) {
-                mismatches.push(`${JSON.stringify(patch)}: no schema violation at "${where}" (${errors.join(', ')})`)
+                mismatches.push(`${label}: no schema violation at "${where}" (${errors.join(', ')})`)
             }
         }
         mismatches.should.deep.equal([])
+    })
+
+    it('rejects mirror axes the engine cannot evaluate', async function() {
+        // a string axis is passed through unevaluated, so an expression silently yields NaN
+        const config = {points: {zones: {matrix: null}, mirror: 'u'}}
+        const results = await ergogen.process(u.deepcopy(config), {debug: true})
+        results.points.mirror_matrix.x.should.be.NaN
+        violations(config).should.include('/points/mirror must be number')
+    })
+
+    it('leaves placement-dependent checks to the engine', async function() {
+        // mirror overrides only reach mirrored points, so a net set only there is accepted
+        const mirror_only = {
+            points: {zones: {matrix: null}, mirror: 30},
+            pcbs: {main: {footprints: [{what: 'via', where: true, asym: 'both', params: {mirror: {net: 'GND'}}}]}}
+        }
+        violations(mirror_only).should.deep.equal([])
+        ;(await engine_error(mirror_only)).should.include('should be of type string')
+
+        // only an explicit "where: false" skips required nets, not a filter that happens to match nothing
+        const unmatched = {
+            points: {zones: {matrix: null}},
+            pcbs: {main: {footprints: [{what: 'via', where: 'nothing'}]}}
+        }
+        violations(unmatched).should.not.deep.equal([])
+        ;(await engine_error(unmatched)).should.equal('')
     })
 
     it('matches the built-in registries', function() {
@@ -226,9 +262,25 @@ describe('Schema', function() {
         // footprint names, params and their types
         const footprint_names = defs.footprint.properties.what.anyOf[0].enum
         footprint_names.should.deep.equal(builtins('footprints'))
-        defs.footprint.allOf.map(cond => cond.if.properties.what.const).should.deep.equal(footprint_names)
+        const typed = defs.footprint.allOf.filter(cond => cond.if.properties.what)
+        typed.map(cond => cond.if.properties.what.const).should.deep.equal(footprint_names)
+        const requiring = defs.footprint.allOf.find(cond => cond.else).else.allOf
+            .map(cond => cond.if.properties.what.const)
         for (const name of footprint_names) {
             const params = require(`../../src/footprints/${name}`).params
+
+            // nets without a default are required, either directly or through mirror overrides
+            const nets = Object.keys(params).filter(param => params[param] === undefined)
+            const nets_def = defs[`footprint_nets_${name}`]
+            if (nets.length) {
+                requiring.should.include(name)
+                nets_def.allOf.map(cond => cond.anyOf[0].required[0]).should.deep.equal(nets)
+                nets_def.allOf.map(cond => cond.anyOf[1].properties.mirror.required[0]).should.deep.equal(nets)
+            } else {
+                requiring.should.not.include(name)
+                should.not.exist(nets_def)
+            }
+
             const props = defs[`footprint_params_${name}`].properties
             Object.keys(props).should.deep.equal(Object.keys(params).concat('mirror'))
             for (const [param, def] of Object.entries(params)) {
