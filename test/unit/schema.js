@@ -119,7 +119,7 @@ describe('Schema', function() {
                         what: 'svg', where: 'thumb', paths: ['M 0 0 L 0 -2.5 L -2.5 -2.5 Z'],
                         accuracy: 0.001, flip_vertically: true, origin: [1, 1], operation: 'stack'
                     },
-                    socket: {what: 'choc_hotswap_socket', where: 'thumb', origin: [0, 1], flip_horizontally: true, operation: 'stack'}
+                    socket: {what: 'choc_hotswap_socket', where: 'thumb', origin: [0, 'step / 10'], flip_horizontally: true, operation: 'stack'}
                 },
                 grown: ['keys', {name: 'keys', expand: '2]'}, {name: 'keys', expand: 1, joints: 'round'}, '-shapes']
             },
@@ -178,6 +178,9 @@ describe('Schema', function() {
             [{points: {key: {orient: {ref: 'matrix_one_only'}}}}, 'should be of type number', '/points/key/orient'],
             [{points: {key: {bind: [1, 2, 3, 4, 5]}}}, 'should be an array of length 4', '/points/key/bind'],
             [{points: {mirror: {ref: 'matrix_one_only', foo: 1}}}, 'Unexpected key "foo"', '/points/mirror'],
+            [{points: {mirror: 100, key: {mirror: 'oops'}}}, 'mirror" should be of type object', '/points/key/mirror'],
+            [{points: {mirror: 100, key: {mirror: {zone: 'z'}}}}, 'mirror.zone" should be of type object', '/points/key/mirror'],
+            [{points: {mirror: 100, key: {mirror: {col: 'c'}}}}, 'mirror.col" should be of type object', '/points/key/mirror'],
             [{points: {mirror: {ref: 'matrix_one_only', aggregate: {parts: []}}}}, 'cannot appear together', '/points/mirror'],
             // a patch would apply $unset itself, so it is set directly
             [c => u.deep(c, 'points.zones.matrix.rows.only', '$unset'), 'should be of type number', '/points/zones/matrix/rows/only'],
@@ -188,6 +191,10 @@ describe('Schema', function() {
             [{points: {zones: {matrix: {anchor: {ref: 'matrix_one_only', aggregate: {parts: []}}}}}}, 'cannot appear together', '/points/zones/matrix/anchor'],
             // outlines
             [{outlines: {bad: [{what: 'svg'}]}}, 'must be a string or an array', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'svg', paths: []}]}}, 'must have at least one path', '/outlines/bad/0'],
+            // the engine fails on an empty path without a validation message, so any error will do
+            [{outlines: {bad: [{what: 'svg', paths: ['']}]}}, '', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'choc_hotswap_socket', origin: 5}]}}, 'should be an array', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'svg', paths: 'M 0 0 L 1 0 L 1 1 Z', flip_vertically: 'yes'}]}}, 'should be of type boolean', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'choc_hotswap_socket', size: 5}]}}, 'Unexpected key "size"', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'rectangle', size: 5, radius: 5}]}}, 'Unexpected key "radius"', '/outlines/bad/0'],
@@ -229,7 +236,7 @@ describe('Schema', function() {
             const config = is_fn ? patch(u.deepcopy(base)) : prep.extend(base, patch)
             const label = is_fn ? patch.toString() : JSON.stringify(patch)
             const error = await engine_error(config)
-            if (!error.includes(snippet)) {
+            if (!error || !error.includes(snippet)) {
                 mismatches.push(`${label}: engine error "${error}" does not include "${snippet}"`)
             }
             const errors = violations(config)
@@ -280,9 +287,25 @@ describe('Schema', function() {
         }
         violations(canonical(raw)).should.deep.equal([])
         ;(await engine_error(raw)).should.equal('')
+
+        // zone and column references can be relabeled, or dropped from an inherited override
+        const relabeled = {
+            'points.mirror': 100,
+            'points.zones.matrix.columns.c': {},
+            'points.key.mirror': {
+                zone: {name: 'thumb', label: 5}, col: {name: 'outer'}, row: 7, custom: 'anything', mirror: 'inert'
+            },
+            'points.zones.matrix.rows': {
+                kept: {},
+                unset: {mirror: {zone: '$unset', col: '$unset'}},
+                replaced: {mirror: {zone: {name: 'other'}, col: {name: 'inner'}}}
+            }
+        }
+        violations(canonical(relabeled)).should.deep.equal([])
+        ;(await engine_error(relabeled)).should.equal('')
     })
 
-    it('leaves placement- and injection-dependent checks to the engine', async function() {
+    it('documents where static checks differ from the engine', async function() {
         // mirror overrides only reach mirrored points, so a net set only there is accepted
         const mirror_only = {
             points: {zones: {matrix: null}, mirror: 30},
@@ -303,6 +326,19 @@ describe('Schema', function() {
         const unknown = {points: {zones: {matrix: null}}, outlines: {bad: [{what: 'square'}]}}
         violations(unknown).should.deep.equal([])
         ;(await engine_error(unknown)).should.include('should be one of')
+
+        // mirror overrides are checked per level, while the engine only checks the merged override
+        // when the key is actually mirrored
+        const mirrored = {'points.mirror': 100, 'points.zones.matrix.columns.c': {}}
+        const inert = {'points.zones.matrix': {}, 'points.key.mirror': 'oops'}
+        violations(prep.unnest(inert)).should.not.deep.equal([])
+        ;(await engine_error(inert)).should.equal('')
+        const cleared_later = {...mirrored, 'points.key.mirror.zone': 'z', 'points.zones.matrix.rows.r.mirror': false}
+        violations(prep.unnest(cleared_later)).should.not.deep.equal([])
+        ;(await engine_error(cleared_later)).should.equal('')
+        const nothing_to_unset = {...mirrored, 'points.key.mirror.zone': '$unset'}
+        violations(prep.unnest(nothing_to_unset)).should.deep.equal([])
+        ;(await engine_error(nothing_to_unset)).should.include('mirror.zone" should be of type object')
     })
 
     it('matches the built-in registries', async function() {

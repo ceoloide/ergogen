@@ -415,12 +415,45 @@
                     "$ref": "#/definitions/key_fields"
                 }
             ],
+            "properties": {
+                "zone": {
+                    "description": "Relabels the zone, e.g. {name: thumb}, which can't be replaced",
+                    "anyOf": [
+                        {
+                            "type": ["object", "null"],
+                            "properties": {
+                                "columns": {
+                                    "$ref": "#/definitions/mirror_relabel"
+                                }
+                            }
+                        },
+                        {
+                            "const": "$unset"
+                        }
+                    ]
+                },
+                "col": {
+                    "description": "Relabels the column, e.g. {name: outer}, which can't be replaced",
+                    "$ref": "#/definitions/mirror_relabel"
+                }
+            },
             "propertyNames": {
                 "description": "Higher-level structure is reserved",
                 "not": {
                     "enum": ["key", "zones", "columns", "rows"]
                 }
             }
+        },
+        "mirror_relabel": {
+            "description": "An object merged onto the shared structure, null to keep it, or \"$unset\" to drop an inherited override",
+            "anyOf": [
+                {
+                    "type": ["object", "null"]
+                },
+                {
+                    "const": "$unset"
+                }
+            ]
         },
         "key_fields": {
             "type": ["object", "null"],
@@ -781,15 +814,17 @@
             ]
         },
         "svg_paths": {
-            "description": "Closed SVG path data (the \"d\" attribute), as one string or a list unioned together",
+            "description": "Closed SVG path data (the \"d\" attribute), as one string or a non-empty list unioned together",
             "anyOf": [
                 {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                 },
                 {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "type": "string",
+                        "minLength": 1
                     },
                     "minItems": 1
                 }
