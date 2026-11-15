@@ -1,3 +1,4 @@
+const m = require('makerjs')
 const yaml = require('js-yaml')
 const ergogen = require('../../src/ergogen')
 const version = require('../../package.json').version
@@ -114,6 +115,20 @@ describe('Interface', function() {
             point.meta.padding.should.equal(19)
             point.meta.tag.should.equal('wide')
         }
+
+        // the same holds for the parts of array-form outlines
+        const outlines = await ergogen.process({
+            wide_part: {what: 'rectangle', where: true, size: 20, corner: 4},
+            base_outlines: {panel: [{what: 'rectangle', where: true, size: 10}]},
+            points: {zones: {matrix: {}}},
+            outlines: {$extends: 'base_outlines', panel: [{$extends: 'wide_part', corner: '$unset'}]}
+        }, {debug: true})
+        outlines.canonical.outlines.panel.should.deep.equal([{what: 'rectangle', where: true, size: 20}])
+        const panel = outlines.outlines.panel.yaml
+        m.measure.modelExtents(panel).should.deep.include({low: [-10, -10], high: [10, 10]})
+        let arcs = 0
+        m.model.walk(panel, {onPath: walked => { if (walked.pathContext.type == 'arc') arcs++ }})
+        arcs.should.equal(0)
     })
 
     it('reserved keys', async function() {

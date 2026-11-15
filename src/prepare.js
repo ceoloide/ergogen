@@ -110,7 +110,15 @@ exports.inherit = config => {
     // its own (or any nested) $extends in between, so that the local fields,
     // including their $unset markers, still apply last
     const overlay = (base, local, breadcrumbs) => {
-        if (a.type(local)() !== 'object') return _extend(base, local)
+        const local_type = a.type(local)()
+        if (local_type === 'array' && a.type(base)() === 'array') {
+            const res = u.deepcopy(base)
+            for (const [i, val] of local.entries()) {
+                res[i] = overlay(res[i], val, [...breadcrumbs, `[${i}]`])
+            }
+            return res
+        }
+        if (local_type !== 'object') return _extend(base, local)
         if (local.$extends !== undefined) {
             let candidates = local.$extends
             if (a.type(candidates)() !== 'array') candidates = [candidates]
@@ -121,7 +129,14 @@ exports.inherit = config => {
                 list.push(resolve(other, path.split('.')))
             }
             delete local.$extends
-            base = extend(base, ...list)
+            // only an object parent is layered under the targets, anything
+            // else is replaced by them, and duplicate targets apply once
+            if (a.type(base)() !== 'object') base = undefined
+            for (const target of list) {
+                if (base !== target) base = _extend(base, target)
+            }
+            // the targets are cached, so results must not share their data
+            base = copy(base)
             if (list.length === 1 && Object.keys(local).length === 0) return base
         }
         if (a.type(base)() !== 'object') return _extend(base, local)
@@ -131,6 +146,14 @@ exports.inherit = config => {
             if (res[key] === undefined) delete res[key]
         }
         return res
+    }
+
+    // like u.deepcopy, but keeps undefined array slots left by $unset
+    const copy = val => {
+        const type = a.type(val)()
+        if (type === 'array') return val.map(copy)
+        if (type === 'object') return Object.fromEntries(Object.entries(val).map(([k, v]) => [k, copy(v)]))
+        return val
     }
 
     return resolve(config, [])
