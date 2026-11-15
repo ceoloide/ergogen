@@ -76,6 +76,7 @@ describe('SVG', function() {
         'matching viewBox': [doc(`<path d="${square}"/>`, `${ns} x="0" y="0" width="14.2mm" height=" 6.7 " viewBox="0,0,14.2,6.7"`), unit_square],
         'viewBox roundoff': [doc(`<path d="${square}"/>`, `${ns} width="37.795mm" viewBox="0 0 37.7953 10"`), unit_square],
         'no paths': [doc('<g/>'), 'must have at least one path'],
+        'compact path data': [doc('<path d="M10 0h-10a5,5 0 0110,0z"/>'), {low: [0, 0], high: [10, 5], chains: 1}],
     }
 
     const rejected = {
@@ -124,6 +125,25 @@ describe('SVG', function() {
         'infinite viewBox': [doc(`<path d="${square}"/>`, `${ns} viewBox="0 0 1e999 10"`), 'four finite numbers'],
         'empty viewBox': [doc(`<path d="${square}"/>`, `${ns} viewBox="0 0 0 10"`), 'positive width and height'],
         'misplaced doctype': [doc('') + '<!DOCTYPE svg>', 'misplaced DOCTYPE'],
+        'truncated path data': [doc(`<path d="${square}"/><path d="M 0 0 C 1 1 2 2"/>`), 'Path 1 for SVG outline'],
+        'empty path data': [doc('<path d=""/>'), 'Path 0 for SVG outline'],
+    }
+    // malformed path data, which makerjs would misread or hang on
+    for (const [title, data, expected] of [
+        ['cubic', 'M 0 0 C 1 1 2 2', 'the command "C" at offset 6 takes 6 arguments per segment, not 4'],
+        ['quadratic', 'M 0 0 Q 1 1', 'the command "Q" at offset 6 takes 4 arguments'],
+        ['smooth cubic', 'M 0 0 S 1 1', 'the command "S" at offset 6 takes 4 arguments'],
+        ['smooth quadratic', 'M 0 0 T 1', 'the command "T" at offset 6 takes 2 arguments'],
+        ['line', 'M 0 0 L 10 0 L 10 10 L 4 Z', 'the command "L" at offset 21 takes 2 arguments'],
+        ['line to origin', 'M 0 0 L 10 0 L 10 10 L 0 Z', 'the command "L" at offset 21 takes 2 arguments'],
+        ['horizontal', 'M 0 0 H 10 V 10 H Z', 'the command "H" at offset 16 takes 1 argument per segment, not 0'],
+        ['moveto', 'M 0 L 10 0 L 10 10 Z', 'the command "M" at offset 0 takes 2 arguments'],
+        ['nonfinite', 'M 0 0 L 1e999 0 L 0 10 Z', 'the number "1e999" at offset 8 is not finite'],
+        ['trailing command', `${square} X`, 'unexpected "X" at offset 30'],
+        ['trailing arguments', `${square} R 1 2`, 'unexpected "R" at offset 30'],
+    ]) {
+        rejected[`malformed ${title}`] = [doc(`<path d="${data}"/>`), `Path 0 for SVG outline`]
+        rejected[`malformed ${title} message`] = [doc(`<path d="${data}"/>`), `has invalid path data, ${expected}`]
     }
     for (const shape of ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image', 'use']) {
         rejected[`visible ${shape}`] = [doc(`<path d="${square}"/><g><${shape}/></g>`), `contains a visible <${shape}>, but only paths are supported! Convert objects to paths`]
@@ -137,6 +157,40 @@ describe('SVG', function() {
         // errors name the outline
         svg_lib.extract.bind(this, doc('<rect/>'), 'named').should.throw('SVG outline "named" contains a visible <rect>')
         svg_lib.tolerance.should.equal(1e-4)
+    })
+
+    it('path data', function() {
+        const valid = (data, expected) => svg_lib.path_data(data, 'P').should.equal(expected)
+        const invalid = (data, snippet) => svg_lib.path_data.bind(this, data, 'P').should.throw(`P has invalid path data, ${snippet}!`)
+        // every command, absolute and relative, with repeated segments and surrounding whitespace
+        valid(' \t\nM0 0 1 1C1 1 2 2 3 3 4 4 5 5 6 6S4 4 5 5c1 1 2 2 3 3s1,1,2,2Q1 1 2 2T3 3q1 1 2 2t1 1L1 2l3 4H1h2V3v4A1 2 3 1 0 5 6zM 1 1z\f\r',
+            'M 0 0 1 1 C 1 1 2 2 3 3 4 4 5 5 6 6 S 4 4 5 5 c 1 1 2 2 3 3 s 1 1 2 2 Q 1 1 2 2 T 3 3 q 1 1 2 2 t 1 1 L 1 2 l 3 4 H 1 h 2 V 3 v 4 A 1 2 3 1 0 5 6 z M 1 1 z')
+        // compact numbers: signs, fractions, exponents, leading zeros and compressed arc flags
+        valid('m0-0l+1e1,0,0 10-.5.5 05 1.5E-1a1.5,1.5 0 018.6,2.2Z', 'm 0 -0 l 10 0 0 10 -0.5 0.5 5 0.15 a 1.5 1.5 0 0 1 8.6 2.2 Z')
+        valid('M0 0a0 -0 -30 1,1 1 1', 'M 0 0 a 0 -0 -30 1 1 1 1')
+        // empty, or not starting with a moveto
+        invalid('', 'it should start with a moveto ("M" or "m")')
+        invalid(' ', 'it should start with a moveto ("M" or "m")')
+        invalid('L 1 1', 'it should start with a moveto ("M" or "m"), not "L"')
+        // unknown commands and stray characters
+        invalid('M 0 0 X', 'unexpected "X" at offset 6')
+        invalid('M 0 0 Z 1', 'unexpected "1" at offset 8')
+        invalid('M 0 0 garbage', 'unexpected "g" at offset 6')
+        invalid('M 0 0 L 1 2e', 'unexpected "e" at offset 11')
+        invalid('M 0 0 L Infinity 0', 'the command "L" at offset 6 takes 2 arguments per segment, not 0')
+        // misplaced commas
+        invalid('M,0 0', 'the command "M" at offset 0 takes 2 arguments per segment, not 0')
+        invalid('M 0,0,', 'expected a number after the comma at offset 6')
+        invalid('M 0 0 L 1,,1', 'expected a number after the comma at offset 10')
+        invalid('M 0 0 A 1 1 0 0,2 1 1', 'expected a flag after the comma at offset 16')
+        // wrong argument counts
+        invalid('M 0 0 A 1 1 0 0 1 1', 'the command "A" at offset 6 takes 7 arguments per segment, not 6')
+        invalid('M 0 0 A 1 1 0 2 1 1 1', 'the command "A" at offset 6 takes 7 arguments per segment, not 3')
+        invalid('M 0 0 V', 'the command "V" at offset 6 takes 1 argument per segment, not 0')
+        // numbers
+        invalid('M 0 -1e999', 'the number "-1e999" at offset 4 is not finite')
+        invalid('M 0 0 a -1 1 0 0 1 1 1', 'the arc radius "-1" at offset 8 is negative')
+        invalid('M 0 0 A 1 -1 0 0 1 1 1', 'the arc radius "-1" at offset 10 is negative')
     })
 
     // the same fixtures must give the same results when loaded from a bundle and when built

@@ -9,6 +9,7 @@ const a = require('./assert')
 //  - a viewBox must start at 0 0, and must match width/height (if present) up to `tolerance`
 //  - comments, foreign (e.g. inkscape) elements and unreferenced defs/clipPath/etc. are ignored
 //  - other visible geometry, transforms, clipping, masking and nested viewports are rejected
+//  - path data has to follow the svg path grammar, and is passed on with its tokens separated
 //  - css (style elements, display, visibility, stroke, fill) never selects or expands paths
 
 const svg_namespace = 'http://www.w3.org/2000/svg'
@@ -33,6 +34,74 @@ const number_regex = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
 const length_regex = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(mm)?\s*$/
 
 const entities = {lt: '<', gt: '>', amp: '&', quot: '"', apos: '\''}
+
+const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
+
+// path data commands, and the number of arguments in each of their segments
+const path_commands = {m: 2, l: 2, h: 1, v: 1, c: 6, s: 4, q: 4, t: 2, a: 7, z: 0}
+const path_space = ' \t\n\f\r'
+const path_number_regex = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y
+const path_flag_regex = /[01]/y
+
+// validates path data against the svg path grammar, and returns it with its tokens separated by spaces
+// (makerjs would silently skip unknown commands, read missing arguments as NaN, hang on some truncated
+// curves, and split valid compact forms like the arc flags in "0 018.6" or the number "05" differently)
+const path_data = exports.path_data = (data, label) => {
+    const fail = reason => {
+        throw new Error(`${label} has invalid path data, ${reason}!`)
+    }
+    const tokens = []
+    let pos = 0
+    const skip = () => {
+        while (pos < data.length && path_space.includes(data[pos])) pos++
+    }
+    // the next argument of a command (with an optional comma before all but the first), if there is one
+    const argument = (command, index, first) => {
+        const start = pos
+        skip()
+        const comma = !first && data[pos] == ','
+        if (comma) {
+            pos++
+            skip()
+        }
+        const flag = command == 'a' && (index == 3 || index == 4)
+        const regex = flag ? path_flag_regex : path_number_regex
+        regex.lastIndex = pos
+        const match = regex.exec(data)
+        if (!match) {
+            if (comma) fail(`expected ${flag ? 'a flag' : 'a number'} after the comma at offset ${pos}`)
+            pos = start
+            return undefined
+        }
+        const value = parseFloat(match[0])
+        if (!Number.isFinite(value)) fail(`the number "${match[0]}" at offset ${pos} is not finite`)
+        if (command == 'a' && index < 2 && value < 0) fail(`the arc radius "${match[0]}" at offset ${pos} is negative`)
+        pos = regex.lastIndex
+        return Object.is(value, -0) ? '-0' : String(value)
+    }
+    skip()
+    while (pos < data.length) {
+        const start = pos
+        const letter = data[pos]
+        const command = letter.toLowerCase()
+        if (!has(path_commands, command)) fail(`unexpected "${letter}" at offset ${pos}`)
+        if (!tokens.length && command != 'm') fail(`it should start with a moveto ("M" or "m"), not "${letter}"`)
+        const arity = path_commands[command]
+        tokens.push(letter)
+        pos++
+        let count = 0
+        while (arity) {
+            const value = argument(command, count % arity, count === 0)
+            if (value === undefined) break
+            tokens.push(value)
+            count++
+        }
+        if (arity && (!count || count % arity)) fail(`the command "${letter}" at offset ${start} takes ${arity} argument${arity == 1 ? '' : 's'} per segment, not ${count}`)
+        skip()
+    }
+    if (!tokens.length) fail('it should start with a moveto ("M" or "m")')
+    return tokens.join(' ')
+}
 
 const decode = (raw, name) => raw.replace(/&(?:#x([0-9a-fA-F]+)|#([0-9]+)|([A-Za-z]+))?;?/g, (match, hex, dec, entity) => {
     a.assert(match.length > 1 && match.endsWith(';'), `SVG outline "${name}" contains a malformed entity "${match}"!`)
@@ -169,6 +238,7 @@ exports.extract = (text, name) => {
             a.assert(frame.transformed === undefined, `SVG outline "${name}" has a transform on <${frame.transformed}> affecting path ${paths.length}, ` +
                 'transforms are not supported! Flatten transforms before exporting.')
             a.assert(attributes.d !== undefined, `SVG outline "${name}" has a <path> without "d" data at index ${paths.length}!`)
+            path_data(attributes.d, `Path ${paths.length} for SVG outline "${name}"`)
             paths.push(attributes.d)
         }
         return frame

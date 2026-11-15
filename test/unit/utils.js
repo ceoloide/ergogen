@@ -182,6 +182,19 @@ describe('Utils', function() {
             return {bounds: extents(model), chains: m.model.findChains(model).length}
         }
         const reject = (part, snippet) => shape(part).should.be.rejectedWith(snippet)
+        const malformed = [
+            ['M 0 0 C 1 1 2 2', 'Path 0 for SVG outline "outlines.o.0" has invalid path data, the command "C" at offset 6 takes 6 arguments per segment, not 4'],
+            ['M 0 0 Q 1 1', 'the command "Q" at offset 6 takes 4 arguments per segment, not 2'],
+            ['M 0 0 S 1 1', 'the command "S" at offset 6 takes 4 arguments per segment, not 2'],
+            ['M 0 0 T 1', 'the command "T" at offset 6 takes 2 arguments per segment, not 1'],
+            ['M 0 0 L 10 0 L 10 10 L 4 Z', 'the command "L" at offset 21 takes 2 arguments per segment, not 1'],
+            ['M 0 0 L 10 0 L 10 10 L 0 Z', 'the command "L" at offset 21 takes 2 arguments per segment, not 1'],
+            ['M 0 0 H 10 V 10 H Z', 'the command "H" at offset 16 takes 1 argument per segment, not 0'],
+            ['M 0 L 10 0 L 10 10 Z', 'the command "M" at offset 0 takes 2 arguments per segment, not 1'],
+            ['M 0 0 L 1e999 0 L 0 10 Z', 'the number "1e999" at offset 8 is not finite'],
+            [[square, `${square} X`], 'Path 1 for SVG outline "outlines.o.0" has invalid path data, unexpected "X" at offset 30'],
+            [`${square} R 1 2`, 'unexpected "R" at offset 30'],
+        ]
 
         it('accuracy', async function() {
             // only a missing accuracy gets the default, and it has to be positive and finite
@@ -200,10 +213,14 @@ describe('Utils', function() {
             await unplaced('  ', 'cannot be empty')
             await unplaced([square, 12], 'Path 1 for SVG outline "outlines.o.0" must be a string')
             await unplaced('M 0 0', 'Path 0 for SVG outline "outlines.o.0" does not contain any geometry')
-            await unplaced('garbage', 'does not contain any geometry')
+            await unplaced('garbage', 'Path 0 for SVG outline "outlines.o.0" has invalid path data, unexpected "g" at offset 0')
             await unplaced('M 0 0 L 10 0 L 10 10', 'SVG paths need to be closed shapes (check failed for path 0 of "outlines.o.0")')
             await unplaced([], 'must have at least one path')
             await unplaced(12, 'must be a string or an array')
+            // malformed path data is rejected before makerjs could misread it (or hang on it)
+            for (const [paths, snippet] of malformed) {
+                await unplaced(paths, snippet)
+            }
             // valid paths without placements produce nothing
             ;(await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: false, paths: square}]}}, {debug: true}))
                 .outlines.o.yaml.models.export.models.should.deep.equal({})
@@ -211,14 +228,23 @@ describe('Utils', function() {
 
         it('import errors', async function() {
             // importer exceptions are named, with the original as their cause
-            const error = await shape({paths: [square, 'M 0 0 A 1'], where: false}).should.be.rejectedWith('Path 1 for SVG outline "outlines.o.0" could not be imported: ')
-            error.cause.should.be.an('error')
-            error.message.should.contain(error.cause.message)
+            const cause = new Error('importer failure')
+            sinon.stub(m.importer, 'fromSVGPathData').callThrough().onSecondCall().throws(cause)
+            const error = await shape({paths: [square, inner], where: false}).should.be.rejectedWith('Path 1 for SVG outline "outlines.o.0" could not be imported: importer failure')
+            error.cause.should.equal(cause)
+        })
+
+        it('normalized path data', async function() {
+            // compact path data reaches makerjs with its tokens separated, so it reads the same numbers
+            // so the compressed arc flags give a closed half circle, not NaN geometry
+            const spy = sinon.spy(m.importer, 'fromSVGPathData')
+            ;(await shape({paths: 'M10 0h-10a5,5 0 0110,0z'})).should.deep.equal({bounds: [[0, 0], [10, 5]], chains: 1})
+            spy.firstCall.args[0].should.equal('M 10 0 h -10 a 5 5 0 0 1 10 0 z')
         })
 
         it('every path is closed', async function() {
             // loose segments only
-            await reject({paths: 'L 10 10'}, 'check failed for path 0')
+            await reject({paths: 'M 0 0 L 10 10'}, 'check failed for path 0')
             // a closed and an open subpath within one path
             await reject({paths: `${square} ${open}`}, 'check failed for path 0')
             // an open, empty or move-only path cannot hide behind a valid one

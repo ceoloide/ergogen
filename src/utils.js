@@ -141,9 +141,11 @@ const import_svg_path = (raw, index, name, accuracy) => {
     const a = require('./assert')
     a.assert(a.type(raw)() == 'string', `Path ${index} for SVG outline "${name}" must be a string!`)
     a.assert(raw.trim() !== '', `Path ${index} for SVG outline "${name}" cannot be empty!`)
+    // malformed path data is rejected before makerjs could misread it, or hang on it
+    const data = require('./svg').path_data(raw, `Path ${index} for SVG outline "${name}"`)
     let model
     try {
-        model = m.importer.fromSVGPathData(raw, accuracy)
+        model = m.importer.fromSVGPathData(data, accuracy)
     } catch (ex) {
         throw new Error(`Path ${index} for SVG outline "${name}" could not be imported: ${ex.message}`, {cause: ex})
     }
