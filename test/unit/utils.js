@@ -160,4 +160,121 @@ describe('Utils', function() {
         u.satisfies({major: 1, minor: 2, patch: 3}, {major: 1, minor: 2, patch: 3}).should.be.true
     })
 
+
+    describe('svg paths to outline', function() {
+
+        this.timeout(120000)
+
+        const ergogen = require('../../src/ergogen')
+        const square = 'M 0 0 L 10 0 L 10 10 L 0 10 Z'
+        const inner = 'M 3 3 L 7 3 L 7 7 L 3 7 Z'
+        const shifted = 'M 5 5 L 15 5 L 15 15 L 5 15 Z'
+        const open = 'M 20 20 L 30 20'
+
+        const round = val => Number(val.toFixed(6)) + 0
+        const extents = model => {
+            const {low, high} = m.measure.modelExtents(model)
+            return [low.map(round), high.map(round)]
+        }
+        const shape = async (part, points={zones: {matrix: null}}) => {
+            const results = await ergogen.process({points, outlines: {o: [{what: 'svg', where: true, ...part}]}}, {debug: true})
+            const model = results.outlines.o.yaml
+            return {bounds: extents(model), chains: m.model.findChains(model).length}
+        }
+        const reject = (part, snippet) => shape(part).should.be.rejectedWith(snippet)
+
+        it('accuracy', async function() {
+            // only a missing accuracy gets the default, and it has to be positive and finite
+            await reject({paths: square, accuracy: 0}, 'Field "outlines.o.0.accuracy" should be a positive finite number')
+            await reject({paths: square, accuracy: -1}, 'should be a positive finite number')
+            await reject({paths: square, accuracy: 'Infinity'}, 'should be a positive finite number')
+            await reject({paths: square, accuracy: 'a'}, 'Field "outlines.o.0.accuracy" should be of type number')
+            ;(await shape({paths: square, accuracy: 0.01})).chains.should.equal(1)
+            ;(await shape({paths: square})).chains.should.equal(1)
+        })
+
+        it('validation without placements', async function() {
+            // paths are validated when the part is set up, even when nothing gets placed
+            const unplaced = (paths, snippet) => shape({paths, where: false}).should.be.rejectedWith(snippet)
+            await unplaced('', 'Path 0 for SVG outline "outlines.o.0" cannot be empty')
+            await unplaced('  ', 'cannot be empty')
+            await unplaced([square, 12], 'Path 1 for SVG outline "outlines.o.0" must be a string')
+            await unplaced('M 0 0', 'Path 0 for SVG outline "outlines.o.0" does not contain any geometry')
+            await unplaced('garbage', 'does not contain any geometry')
+            await unplaced('M 0 0 L 10 0 L 10 10', 'SVG paths need to be closed shapes (check failed for path 0 of "outlines.o.0")')
+            await unplaced([], 'must have at least one path')
+            await unplaced(12, 'must be a string or an array')
+            // valid paths without placements produce nothing
+            ;(await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: false, paths: square}]}}, {debug: true}))
+                .outlines.o.yaml.models.export.models.should.deep.equal({})
+        })
+
+        it('import errors', async function() {
+            // importer exceptions are named, with the original as their cause
+            const error = await shape({paths: [square, 'M 0 0 A 1'], where: false}).should.be.rejectedWith('Path 1 for SVG outline "outlines.o.0" could not be imported: ')
+            error.cause.should.be.an('error')
+            error.message.should.contain(error.cause.message)
+        })
+
+        it('every path is closed', async function() {
+            // loose segments only
+            await reject({paths: 'L 10 10'}, 'check failed for path 0')
+            // a closed and an open subpath within one path
+            await reject({paths: `${square} ${open}`}, 'check failed for path 0')
+            // an open, empty or move-only path cannot hide behind a valid one
+            await reject({paths: [square, open]}, 'check failed for path 1')
+            await reject({paths: [square, 'M 0 0 L 10 0 L 10 10']}, 'check failed for path 1')
+            await reject({paths: [square, '']}, 'Path 1 for SVG outline "outlines.o.0" cannot be empty')
+            await reject({paths: [square, 'M 5 5']}, 'Path 1 for SVG outline "outlines.o.0" does not contain any geometry')
+            await reject({paths: [open, square]}, 'check failed for path 0')
+        })
+
+        it('topology', async function() {
+            // subpaths within a single path keep their holes and crossings
+            ;(await shape({paths: `${square} ${inner}`})).should.deep.equal({bounds: [[0, -10], [10, 0]], chains: 2})
+            ;(await shape({paths: `${square} ${shifted}`})).should.deep.equal({bounds: [[0, -15], [15, 0]], chains: 2})
+            // separate paths are unioned
+            ;(await shape({paths: [square, inner]})).should.deep.equal({bounds: [[0, -10], [10, 0]], chains: 1})
+            ;(await shape({paths: [square, shifted]})).should.deep.equal({bounds: [[0, -15], [15, 0]], chains: 1})
+        })
+
+        it('import once per part', async function() {
+            const spy = sinon.spy(m.importer, 'fromSVGPathData')
+            const points = {zones: {matrix: {columns: {a: null, b: null, c: null}}}}
+            ;(await shape({paths: [square, inner]}, points)).chains.should.equal(3)
+            spy.callCount.should.equal(2)
+        })
+
+        it('independent placements', async function() {
+            // every placement (mirrored or not) gets its own copy of the cached shape
+            const points = {zones: {matrix: {columns: {a: null, b: null}}}, mirror: {distance: 60}}
+            const results = await ergogen.process({points, outlines: {
+                o: [{what: 'svg', where: true, paths: 'M 0 0 L 4 0 L 0 2 Z'}],
+                rotated: [{what: 'svg', where: true, adjust: {rotate: 90}, paths: 'M 0 0 L 4 0 L 0 2 Z'}],
+            }}, {debug: true})
+            const chains = name => m.model.findChains(results.outlines[name].yaml)
+                .map(chain => extents(m.chain.toNewModel(chain)))
+                .sort((x, y) => x[0][0] - y[0][0])
+            chains('o').should.deep.equal([
+                [[0, -2], [4, 0]],
+                [[19, -2], [23, 0]],
+                [[37, -2], [41, 0]],
+                [[56, -2], [60, 0]],
+            ])
+            chains('rotated').should.deep.equal([
+                [[0, 0], [2, 4]],
+                [[19, 0], [21, 4]],
+                [[39, 0], [41, 4]],
+                [[58, 0], [60, 4]],
+            ])
+        })
+
+        it('fixed paths', async function() {
+            // the built-in socket has its own path data, so `paths` would be silently ignored
+            await ergogen.process({
+                points: {zones: {matrix: null}},
+                outlines: {o: [{what: 'choc_hotswap_socket', where: true, paths: square}]}
+            }).should.be.rejectedWith('Unexpected key "paths" within field "outlines.o.0"')
+        })
+    })
 })

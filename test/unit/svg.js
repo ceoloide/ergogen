@@ -162,6 +162,11 @@ describe('SVG', function() {
         })
     }
 
+    it('bundled svg outlines take no paths', async function() {
+        // fixed path data cannot take an ignored `paths` option
+        await via_bundle(doc(`<path d="${square}"/>`), {paths: far_square}).should.be.rejectedWith('Unexpected key "paths" within field "outlines.o.0"')
+    })
+
     it('build transform skips other files', async function() {
         should.equal((await build_plugin()).transform('const x = 1', '/anywhere/x.js'), null)
     })
