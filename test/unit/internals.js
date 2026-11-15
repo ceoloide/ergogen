@@ -34,6 +34,18 @@ describe('Internals', function() {
         ])
     })
 
+    it('verify without a usable ajv', function() {
+        // a missing dependency, or blocked code generation, is an environment problem rather than a config one
+        verify_lib._compile.bind(this, undefined).should.throw('needs Ajv, which isn\'t available')
+        class Blocked {
+            constructor() {
+                throw new EvalError('Code generation from strings disallowed')
+            }
+        }
+        verify_lib._compile.bind(this, Blocked).should.throw('Code generation from strings disallowed')
+        verify_lib._compile.bind(this, Blocked).should.throw('needs code generation')
+    })
+
     it('verify with unforeseen schema keywords', function() {
         // keywords the schema doesn't use yet fall back to ajv's own wording
         verify_lib._diagnose([

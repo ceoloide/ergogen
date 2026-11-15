@@ -65,10 +65,87 @@ describe('Verify', function() {
             const diagnostic = ergogen.verify(raw).diagnostics[0]
             diagnostic.should.include({code: 'invalid_root', pointer: '', actual: type})
             diagnostic.expected.should.deep.equal({type: ['object']})
-            diagnostic.message.should.include(`(got ${type})`)
+            diagnostic.message.should.include(`not ${type}`)
         }
         global.verify_ran.should.be.false
         delete global.verify_ran
+    })
+
+    it('unsupported inputs', function() {
+        // only the data YAML can describe is accepted, reported where it was found in the input
+        class Custom {}
+        const cyclic = {points: {zones: {matrix: null}}}
+        cyclic.points.again = cyclic.points
+        const inputs = [
+            ['points: &p\n  zones: {matrix: null}\n  again: *p', 'cyclic_value', '/points/again'],
+            [cyclic, 'cyclic_value', '/points/again'],
+            [{points: {zones: {matrix: null}}, units: {a: 10n}}, 'unsupported_value', '/units/a', 'BigInt'],
+            [{points: {zones: {matrix: null}}, meta: {author: () => 'me'}}, 'unsupported_value', '/meta/author', 'Function'],
+            [{points: {zones: {matrix: null}}, meta: {author: new Map([['a', 1]])}}, 'unsupported_value', '/meta/author', 'Map'],
+            [{points: {zones: {matrix: null}}, meta: {author: Buffer.from('me')}}, 'unsupported_value', '/meta/author', 'Uint8Array'],
+            [{points: {zones: {matrix: new Custom()}}}, 'unsupported_value', '/points/zones/matrix', 'Object'],
+            [new Map([['points', {}]]), 'unsupported_value', '', 'Map']
+        ]
+        for (const [raw, code, pointer, actual] of inputs) {
+            const result = ergogen.verify(raw)
+            result.checks.should.deep.equal(['parse'])
+            result.diagnostics.length.should.equal(1)
+            result.diagnostics[0].should.include({code, phase: 'parse', pointer})
+            if (actual) result.diagnostics[0].actual.should.equal(actual)
+        }
+        ergogen.verify(cyclic).diagnostics[0].message.should.equal('Value of field "points.again" contains itself!')
+        ergogen.verify(new Map()).diagnostics[0].message.should.equal('Value of the config root isn\'t plain YAML or JSON data (got Map)!')
+
+        // shared but acyclic values, prototype-less objects and undefined fields are fine
+        const prototypeless = Object.assign(Object.create(null), {zones: {matrix: null}})
+        ergogen.verify('shared: &s {matrix: null}\npoints:\n  zones: *s\n  key: {tags: *s}').valid.should.be.true
+        ergogen.verify({points: prototypeless, meta: {author: undefined}}).valid.should.be.true
+    })
+
+    it('dates', async function() {
+        // yaml dates end up just like when processing, and date objects in the input stay untouched
+        const yaml = 'meta.created: 2026-01-01\npoints.zones.matrix:\n'
+        const result = ergogen.verify(yaml)
+        result.valid.should.be.true
+        result.canonical.should.deep.equal((await ergogen.process(yaml, {debug: true})).canonical)
+        const date = new Date(0)
+        const input = {meta: {created: date}, points: {zones: {matrix: null}}}
+        ergogen.verify(input).canonical.meta.should.deep.equal({created: {}})
+        input.meta.created.should.equal(date)
+    })
+
+    it('keys reaching the object prototype', function() {
+        const probe = () => Object.prototype.schema_probe
+        try {
+            const inputs = [
+                ['points.zones.matrix:\n__proto__.schema_probe: 1\n', 'unsafe_key', '/__proto__.schema_probe',
+                    'Key "__proto__.schema_probe" within the config root would reach the object prototype!'],
+                [{points: {zones: {matrix: null}, key: {'constructor.prototype.schema_probe': 1}}}, 'unsafe_key',
+                    '/points/key/constructor.prototype.schema_probe',
+                    'Key "constructor.prototype.schema_probe" within field "points.key" would reach the object prototype!'],
+                ['{"points": {"zones": {"matrix": null}}, "__proto__": {"schema_probe": 1}}', 'unsafe_key', '/__proto__'],
+                [{points: {zones: {matrix: {$extends: 'a.__proto__.schema_probe.x'}}}, a: {}}, 'unsafe_reference',
+                    '/points/zones/matrix/$extends',
+                    'Inheritance target "a.__proto__.schema_probe.x" in field "points.zones.matrix.$extends" would reach the object prototype!'],
+                [{points: {zones: {matrix: {$extends: ['a', 'constructor.prototype']}}}, a: {}}, 'unsafe_reference',
+                    '/points/zones/matrix/$extends']
+            ]
+            for (const [raw, code, pointer, message] of inputs) {
+                const result = ergogen.verify(raw)
+                result.checks.should.deep.equal(['parse'])
+                result.diagnostics.length.should.equal(1)
+                result.diagnostics[0].should.include({code, phase: 'parse', pointer})
+                if (message) result.diagnostics[0].message.should.equal(message)
+                should.not.exist(probe())
+            }
+            // those names can still end a key, as plain custom metadata
+            ergogen.verify({points: {zones: {matrix: null}, key: {constructor: 1, 'meta.prototype': 2}}}).valid.should.be.true
+            should.not.exist(probe())
+            // and later calls are unaffected
+            ergogen.verify(fixture('minimal.yml')).valid.should.be.true
+        } finally {
+            delete Object.prototype.schema_probe
+        }
     })
 
     it('preprocessing errors', function() {
@@ -151,7 +228,7 @@ describe('Verify', function() {
         by_pointer('/points/zones/matrix/columns/one/key/zone').message
             .should.equal('Reserved key "zone" within field "points.zones.matrix.columns.one.key"!')
         by_pointer('/points/mirror').should.deep.include({
-            message: 'Fields "ref" and "aggregate" cannot appear together in "points.mirror"!',
+            message: 'Fields "ref" and "aggregate" cannot appear together in field "points.mirror"!',
             expected: {not_together: ['ref', 'aggregate']}
         })
         by_pointer('/outlines/plate/0').should.deep.include({
@@ -208,6 +285,30 @@ describe('Verify', function() {
         const odd = ergogen.verify({points: {zones: {'a/b~c': {stagger: 1}}}}).diagnostics[0]
         odd.pointer.should.equal('/points/zones/a~1b~0c/stagger')
         odd.path.should.deep.equal(['points', 'zones', 'a/b~c', 'stagger'])
+    })
+
+    it('results never share the schema', function() {
+        // changing a diagnostic doesn't change what later calls report
+        const config = {
+            points: {zones: {matrix: null}, mirror: {ref: 'matrix', aggregate: {parts: []}}},
+            outlines: {plate: [{what: 'circle', operation: 'union'}]}
+        }
+        const first = ergogen.verify(config).diagnostics
+        first[0].expected.not_together.push('changed')
+        first[1].expected.values.push('changed')
+        const second = ergogen.verify(config).diagnostics
+        second[0].expected.not_together.should.deep.equal(['ref', 'aggregate'])
+        second[1].expected.values.should.deep.equal(['add', 'subtract', 'intersect', 'stack'])
+    })
+
+    it('large configs', function() {
+        // every independent problem is still reported, one per field
+        const zones = {}
+        for (let i = 0; i < 2000; i++) zones[`zone${i}`] = {stagger: 1, anchor: 5}
+        const result = ergogen.verify({points: {zones}})
+        result.diagnostics.length.should.equal(4000)
+        result.diagnostics.filter(d => d.code == 'unexpected_field').length.should.equal(2000)
+        result.diagnostics.filter(d => d.code == 'invalid_type').length.should.equal(2000)
     })
 
     it('dynamic and injected configs', function() {

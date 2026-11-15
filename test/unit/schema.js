@@ -24,7 +24,7 @@ describe('Schema', function() {
     // the schema describes the config after preprocessing, just like the engine sees it
     const canonical = raw => {
         const [config] = io.interpret(raw, () => {})
-        return prep.concat(prep.parameterize(prep.inherit(prep.unnest(config))))
+        return prep.steps.reduce((result, step) => prep[step](result), config)
     }
 
     const engine_error = async config => {

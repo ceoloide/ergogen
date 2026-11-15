@@ -20,10 +20,22 @@ if (!result.valid) {
 }
 ```
 
-It takes YAML or JSON text, or a config object made of plain JSON data.
+It takes YAML or JSON text, or a config object holding the kind of data YAML describes:
+
+- plain objects and arrays
+- strings, numbers, booleans, `null` or `undefined`
+- dates, which preprocessing turns into empty objects, just like when processing
+
+Anything else is reported instead of being converted, like cyclic data, functions, `BigInt`s, `Map`s, buffers or class instances.
+So are keys and `$extends` paths that the engine's dotted paths would follow into the object prototype, like `__proto__.x` or `constructor.prototype.x`.
+A plain `constructor` or `prototype` key is still fine.
+
 JS code and KLE layouts can only be used with `ergogen.process`, as verifying them would mean running or converting them.
 Bundles aren't supported either.
 The input is never modified.
+
+Config problems never throw.
+`verify` only throws when it can't run at all: when Ajv is missing, or when a content security policy keeps it from compiling the schema.
 
 ### Result
 
@@ -40,7 +52,8 @@ Depending on the problem, it also has:
 
 - `line` and `column` (1-based) for syntax errors
 - `stage` (`unnest`, `inherit`, `parameterize` or `concat`) for preprocessing errors
-- `path` (key segments) and `pointer` (a JSON pointer) into the canonical config for structural errors, pointing to the field itself, even when it's missing or unexpected
+- `path` (key segments) and `pointer` (a JSON pointer) to the field itself, even when it's missing or unexpected.
+  These point into the parsed input for the `parse` phase, and into the canonical config for the `structure` phase.
 - `expected` and `actual` values, where they help
 
 | Code | Phase | Problem |
@@ -48,6 +61,10 @@ Depending on the problem, it also has:
 | `syntax_error` | `parse` | The text isn't valid YAML or JSON |
 | `empty_config` | `parse` | There's no config at all |
 | `invalid_root` | `parse` | The config isn't an object (`actual` holds its type) |
+| `cyclic_value` | `parse` | A value contains itself |
+| `unsupported_value` | `parse` | A value isn't plain YAML or JSON data (`actual` holds its type) |
+| `unsafe_key` | `parse` | A key would reach the object prototype |
+| `unsafe_reference` | `parse` | An `$extends` path would reach the object prototype |
 | `preprocess_error` | `preprocess` | `$extends`, `$params` or `$concat` failed |
 | `missing_field` | `structure` | A required field is missing |
 | `unexpected_field` | `structure` | A field isn't allowed there |
@@ -113,7 +130,13 @@ A syntax error stops right away, with its position in the text:
 - Preprocessing errors carry the engine's message and the failing stage, but no path.
 - A value that fits none of the forms of a field gets a single diagnostic listing them all. A list mixing filter conditions and anchors can still get one diagnostic per form.
 
-### Browser bundle
+### Dependencies
 
-The UMD bundle in `dist/` expects Ajv as the global `ajv7`, next to its other dependencies.
-`dist/ajv7.min.js` from the `ajv-dist` package provides it.
+Ajv is only loaded and compiled the first time a config reaches the structural check, so `ergogen.process` never needs it.
+
+In Node, the `ajv` dependency (^8.20.0) is used.
+The UMD bundle in `dist/` takes Ajv from the global `ajv7` in browsers, or the `ajv` module with AMD.
+`dist/ajv7.min.js` from the `ajv-dist` package provides that global, and its latest release (8.17.1) has the same API.
+
+Ajv compiles the schema into code, so `verify` needs a content security policy that allows it, like `'unsafe-eval'` in `script-src`.
+`ergogen.process` works either way.
