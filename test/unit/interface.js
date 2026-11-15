@@ -210,10 +210,8 @@ describe('Interface', function() {
             // zone and column references can be relabeled, but not replaced
             invalid({'points.key.mirror.zone': 'z'}, 'matrix_c.mirror.zone', 'object'),
             invalid({'points.key.mirror.zone': '$unset'}, 'matrix_c.mirror.zone', 'object'),
-            invalid({'points.key.mirror.zone.name': 5}, 'matrix_c.mirror.zone.name', 'string'),
             invalid({'points.key.mirror.zone.columns': '$unset'}, 'matrix_c.mirror.zone.columns', 'object'),
             invalid({'points.key.mirror.col': 'c'}, 'matrix_c.mirror.col', 'object'),
-            invalid({'points.key.mirror.col.name': '$unset'}, 'matrix_c.mirror.col.name', 'string'),
             // zone-level mirroring goes through the same checks
             ergogen.process({
                 'points.zones.matrix': {mirror: 100, columns: {c: {}}},
@@ -243,6 +241,8 @@ describe('Interface', function() {
         cleared.mirror_matrix_c_unset.meta.zone.name.should.equal('matrix')
         cleared.mirror_matrix_c_unset.meta.col.name.should.equal('c')
         cleared.mirror_matrix_c_cleared.meta.width.should.equal(18)
+        cleared.mirror_matrix_c_replaced.meta.zone.name.should.equal('thumb')
+        cleared.mirror_matrix_c_replaced.meta.col.name.should.equal('outer')
 
         // valid relabels keep the rest of the shared structure, and nested metadata isn't inspected
         const relabeled = (await ergogen.process({
@@ -267,6 +267,27 @@ describe('Interface', function() {
         relabeled.matrix_c.meta.mirror.mirror.should.equal('inert')
         relabeled.matrix_c.meta.zone.name.should.equal('matrix')
         relabeled.matrix_c.meta.col.name.should.equal('c')
+
+        // names that read as numbers or math constants stay plain names, with global or zone mirroring
+        const numeric = (await ergogen.process({
+            'points.mirror': 100,
+            'points.zones': {
+                1: {columns: {1: {}, e: {}}},
+                e: {mirror: 50, columns: {pi: {}}}
+            }
+        })).points
+        Object.keys(numeric).should.have.members(['1_1', '1_e', 'e_pi', 'mirror_e_pi', 'mirror_1_1', 'mirror_1_e'])
+        numeric.mirror_1_1.meta.zone.name.should.equal('1')
+        numeric.mirror_1_e.meta.col.name.should.equal('e')
+        numeric.mirror_e_pi.meta.zone.name.should.equal('e')
+        numeric.mirror_e_pi.meta.col.name.should.equal('pi')
+
+        // and so do numeric relabels
+        const renumbered = (await ergogen.process({
+            ...mirrored, 'points.key.mirror': {zone: {name: 5}, col: {name: 7}}
+        })).points
+        renumbered.mirror_matrix_c.meta.zone.name.should.equal(5)
+        renumbered.mirror_matrix_c.meta.col.name.should.equal(7)
     })
 
     it('engine', async function() {

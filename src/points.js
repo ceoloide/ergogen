@@ -264,10 +264,8 @@ const perform_mirror = exports._perform_mirror = (point, axis, units) => {
 
     // zone and column overrides can only relabel, as autobind relies on their structure
     a.sane(mp.meta.zone, `${mirror_name}.zone`, 'object')()
-    a.sane(mp.meta.zone.name, `${mirror_name}.zone.name`, 'string')()
     a.sane(mp.meta.zone.columns, `${mirror_name}.zone.columns`, 'object')()
     a.sane(mp.meta.col, `${mirror_name}.col`, 'object')()
-    a.sane(mp.meta.col.name, `${mirror_name}.col.name`, 'string')()
 
     // Re-sanitize overridden properties
     if (mirror_config.width !== undefined) {
