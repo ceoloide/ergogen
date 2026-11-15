@@ -9,6 +9,12 @@ const filter = require('./filter').parse
 const injected_outlines = require('./outlines/index')
 const hulljs = require('hull')
 
+// a new model wrapping (or replacing) an outline keeps its color for the uncolored geometry
+const carry = (from, to) => {
+    if (from.layer) to.layer = from.layer
+    return to
+}
+
 const binding = (base, bbox, point, units) => {
 
     let bind = a.trbl(point.meta.bind || 0, `${point.meta.name}.bind`)(units)
@@ -382,6 +388,7 @@ exports.parse = (config, points, units) => {
             const expand = a.sane(part.expand || 0, `${name}.expand`, 'number')(units)
             const joints = a.in(a.sane(part.joints || 0, `${name}.joints`, 'number')(units), `${name}.joints`, [0, 1, 2])
             const scale = a.sane(part.scale || 1, `${name}.scale`, 'number')(units)
+            const color = part.color === undefined ? undefined : a.in(part.color, `${name}.color`, Object.keys(m.exporter.colors))
 
             // these keys are then removed, so ops can check their own unexpected keys without interference
             delete part.operation
@@ -394,6 +401,7 @@ exports.parse = (config, points, units) => {
             delete part.expand
             delete part.joints
             delete part.scale
+            delete part.color
 
             // a prototype "shape" maker (and its units) are computed
             const [shape_maker, shape_units] = (whats[what] || injected_outlines[what])(part, name, points, outlines, units)
@@ -407,17 +415,22 @@ exports.parse = (config, points, units) => {
                     shape = binding(shape, bbox, point, shape_units)
                 }
                 shape = point.position(shape) // ...actual positioning happens here
-                outlines[outline_name] = operation(outlines[outline_name], shape)
+                // stacked parts only color their own shape
+                if (color && operation == u.stack) u.recolor(shape, color)
+                outlines[outline_name] = carry(outlines[outline_name], operation(outlines[outline_name], shape))
             }
+
+            // other colored parts recolor the whole outline, which uncolored geometry then inherits
+            if (color && operation != u.stack) u.recolor(outlines[outline_name], color)
 
             if (scale !== 1) {
                 outlines[outline_name] = m.model.scale(outlines[outline_name], scale)
             }
     
             if (expand) {
-                outlines[outline_name] = m.model.outline(
+                outlines[outline_name] = carry(outlines[outline_name], m.model.outline(
                     outlines[outline_name], Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
-                )
+                ))
             }
 
             if (fillet) {

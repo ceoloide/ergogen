@@ -191,3 +191,18 @@ exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units
         return [shape, {low: bbox.low, high: bbox.high}]
     }, units]
 }
+
+// colors a model uniformly, removing any (otherwise overriding) color nested within
+exports.recolor = (model, color) => {
+    m.model.walk(model, {
+        onPath: wp => {
+            delete wp.pathContext.layer
+        },
+        beforeChildWalk: wm => {
+            delete wm.childModel.layer
+            return true
+        }
+    })
+    model.layer = color
+    return model
+}

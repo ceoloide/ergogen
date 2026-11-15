@@ -160,4 +160,18 @@ describe('Utils', function() {
         u.satisfies({major: 1, minor: 2, patch: 3}, {major: 1, minor: 2, patch: 3}).should.be.true
     })
 
+    it('recolor', function() {
+        const model = {layer: 'red', paths: {line: {...u.line([0, 0], [1, 0]), layer: 'blue'}}, models: {
+            nested: {layer: 'green', models: {deeper: {paths: {line: u.line([0, 0], [0, 1])}}}},
+            empty: null // like the result of a fillet that doesn't fit
+        }}
+        const layers = []
+        m.model.walk(u.recolor(model, 'navy'), {onPath: wp => layers.push(wp.layer)})
+        layers.should.deep.equal(['navy', 'navy'])
+        model.should.deep.equal({layer: 'navy', paths: {line: u.line([0, 0], [1, 0])}, models: {
+            nested: {models: {deeper: {paths: {line: u.line([0, 0], [0, 1])}}}},
+            empty: null
+        }})
+    })
+
 })

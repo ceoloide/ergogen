@@ -1,4 +1,5 @@
 const yaml = require('js-yaml')
+const m = require('makerjs')
 const ergogen = require('../../src/ergogen')
 const version = require('../../package.json').version
 const {fixture} = require('../helpers/fixture')
@@ -304,5 +305,108 @@ describe('Interface', function() {
         result_svg.should.have.nested.property('outlines.export.svg')
         const result_no_svg = await ergogen.process(medium, {svg: false})
         result_no_svg.should.not.have.nested.property('outlines.export.svg')
+    })
+
+    it('colors', async function() {
+        const at = shift => ({ref: 'matrix_col_row', shift})
+        const rect = (color, operation, shift=[0, 0], size=[20, 10]) => ({what: 'rectangle', size, color, operation, adjust: {shift}})
+        const circle = (color, operation, shift, radius=4) => ({what: 'circle', radius, color, operation, adjust: {shift}})
+        const ref = (name, color) => ({what: 'outline', name, color})
+        // red add, blue stack, uncolored subtract cutting through both
+        const stacked = () => [rect('red'), rect('blue', 'stack', [20, 0], 10), circle(undefined, 'subtract', [12.5, 0])]
+        const config = {
+            points: {zones: {matrix: {columns: {col: {}}, rows: {row: {}}}}},
+            outlines: {
+                kept: [rect('red'), circle(undefined, 'subtract', [10, 0])],
+                swapped: [rect('red'), circle('blue', 'subtract', [10, 0])],
+                stacked: stacked(),
+                recolored: [...stacked(), circle('green', 'add', [-10, 0])],
+                inherited: [rect('red'), rect(undefined, 'stack', [20, 0], 10)],
+                referenced: [ref('stacked'), circle(undefined, 'add', [0, 20], 2)],
+                overridden: [ref('stacked', 'lime')],
+                retained: [circle('navy', 'add', [0, 20], 2), ref('stacked')],
+                scaled: [{...ref('stacked'), scale: 0.5}],
+                // expansion makes a whole new outline in the chain color, fillets add arcs in it
+                expanded: [...stacked(), {...rect(undefined, 'stack', [0, 20], 4), expand: 1}],
+                filleted: [rect('red'), {...circle(undefined, 'subtract', [-10, 0], 2), fillet: 1}],
+                curve: [{what: 'path', color: 'red', segments: [
+                    {type: 'bezier', points: [at([0, 0]), at([10, 20]), at([20, -20]), at([30, 0])]}
+                ]}],
+                square: [rect('black', 'add', [0, 0], 10), rect('white', 'stack', [5, 0], 10)]
+            },
+            cases: {plate: [{name: 'stacked', extrude: 1}, {name: 'square', extrude: 2}]},
+            pcbs: {main: {outlines: [{outline: 'recolored'}, {outline: 'curve'}, {outline: 'square'}]}}
+        }
+        const strip = (obj, key) => JSON.parse(JSON.stringify(obj, (k, v) => k == key ? undefined : v))
+        const colored = await ergogen.process(config, {debug: true})
+        const uncolored = await ergogen.process(strip(config, 'color'), {debug: true})
+        const layers = name => {
+            const counts = {}
+            m.model.walk(colored.outlines[name].yaml, {onPath: wp => {
+                const layer = wp.layer || 'default'
+                counts[layer] = (counts[layer] || 0) + 1
+            }})
+            return counts
+        }
+
+        // an omitted color changes nothing, so the subtracted cut stays red...
+        layers('kept').should.deep.equal({red: 6})
+        // ...while an explicit one recolors the whole outline
+        layers('swapped').should.deep.equal({blue: 6})
+        // stacked parts keep their own color, and the cut takes the chain color, even through them
+        layers('stacked').should.deep.equal({red: 7, blue: 5})
+        // until an explicit boolean color recolors everything, stacked parts included
+        layers('recolored').should.deep.equal({green: 14})
+        // uncolored stacked parts take the chain color too
+        layers('inherited').should.deep.equal({red: 8})
+        // references keep their colors, without starting a chain in the outline using them...
+        layers('referenced').should.deep.equal({red: 7, blue: 5, default: 1})
+        layers('scaled').should.deep.equal({red: 7, blue: 5})
+        // ...unless overridden, nor are they repainted by an existing chain
+        layers('overridden').should.deep.equal({lime: 12})
+        layers('retained').should.deep.equal({navy: 1, red: 7, blue: 5})
+        // uncolored expansions and fillets keep the chain color
+        Object.keys(layers('expanded')).should.deep.equal(['red'])
+        Object.keys(layers('filleted')).should.deep.equal(['red'])
+
+        // colors are only layers, so the geometry of outlines, cases and pcbs stays the same
+        for (const name of Object.keys(config.outlines)) {
+            strip(colored.outlines[name].yaml, 'layer').should.deep.equal(uncolored.outlines[name].yaml)
+        }
+        colored.cases.should.deep.equal(uncolored.cases)
+        colored.pcbs.should.deep.equal(uncolored.pcbs)
+
+        // uniformly colored curves keep their native svg reconstruction
+        const count = (str, regex) => (str.match(regex) || []).length
+        count(colored.outlines.curve.svg, / C /g).should.equal(1)
+        count(colored.outlines.curve.svg, / C /g).should.equal(count(uncolored.outlines.curve.svg, / C /g))
+        colored.outlines.curve.svg.should.include('stroke="red"')
+
+        // black is literal in svg, but ACI 7 in dxf, just like white
+        colored.outlines.square.svg.should.include('stroke="black"')
+        colored.outlines.square.svg.should.include('stroke="white"')
+        colored.outlines.square.dxf.should.match(/LAYER\n2\nblack\n70\n0\n62\n7\n/)
+        colored.outlines.square.dxf.should.match(/LAYER\n2\nwhite\n70\n0\n62\n7\n/)
+
+        // layers coming from injected outlines are kept, unless a color overrides them
+        ergogen.inject('outline', 'layered_test', (config, name, points, outlines, units) => [() => [
+            {models: {inner: {layer: 'aqua', paths: {circle: new m.paths.Circle([0, 0], 5)}}}},
+            {low: [-5, -5], high: [5, 5]}
+        ], units])
+        const layered = color => ergogen.process({
+            points: config.points,
+            outlines: {layered: [{what: 'layered_test', color}]}
+        })
+        const kept = await layered()
+        kept.outlines.layered.dxf.should.match(/\naqua\n/)
+        const overridden = await layered('red')
+        overridden.outlines.layered.dxf.should.not.match(/\naqua\n/)
+
+        // only the exact color names are valid, with no default for falsy values
+        const invalid = color => ergogen.process({
+            points: config.points,
+            outlines: {wrong: [{what: 'circle', radius: 1, color}]}
+        }).should.be.rejectedWith('outlines.wrong.0.color')
+        return Promise.all(['', null, '#ff0000', 'Red', 'pink'].map(invalid))
     })
 })
