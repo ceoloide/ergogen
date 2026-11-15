@@ -108,6 +108,8 @@ const path_data = exports.path_data = (data, label) => {
         while (arity) {
             const value = argument(command, count % arity, count === 0)
             if (value === undefined) break
+            // makerjs only reads the first argument of "H" and "V", so every further one gets its own command
+            if (count && arity == 1) tokens.push(letter)
             tokens.push(value)
             count++
         }

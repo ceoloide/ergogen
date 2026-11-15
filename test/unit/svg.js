@@ -81,6 +81,9 @@ describe('SVG', function() {
         'unreferenced marker': [doc(`<defs><marker id="m"><circle r="10"/></marker></defs>` +
             `<g style="marker: none"><path marker-end="none" filter="none" style="rotate: none; scale: none" d="${square}"/></g>`), unit_square],
         'compact path data': [doc('<path d="M10 0h-10a5,5 0 0110,0z"/>'), {low: [0, 0], high: [10, 5], chains: 1}],
+        'repeated horizontal and vertical lines': [doc('<path d="M0 0H5 10V5 10H0Z"/>'), unit_square],
+        'repeated relative horizontal and vertical lines': [doc('<path d="M0 0h5 5v5 5h-5 -5z"/>'), unit_square],
+        'repeated backwards relative line': [doc('<path d="M0 0h-2 12v10h-10z"/>'), {low: [-2, -10], high: [10, 0], chains: 1}],
     }
 
     const rejected = {
@@ -183,6 +186,8 @@ describe('SVG', function() {
         // compact numbers: signs, fractions, exponents, leading zeros and compressed arc flags
         valid('m0-0l+1e1,0,0 10-.5.5 05 1.5E-1a1.5,1.5 0 018.6,2.2Z', 'm 0 -0 l 10 0 0 10 -0.5 0.5 5 0.15 a 1.5 1.5 0 0 1 8.6 2.2 Z')
         valid('M0 0a0 -0 -30 1,1 1 1', 'M 0 0 a 0 -0 -30 1 1 1 1')
+        // repeated horizontal and vertical arguments each get their own command, other repeats are kept
+        valid('M0 0 1 1H5 10V10,20h1-2v3 4 5L1 1 2 2', 'M 0 0 1 1 H 5 H 10 V 10 V 20 h 1 h -2 v 3 v 4 v 5 L 1 1 2 2')
         // empty, or not starting with a moveto
         invalid('', 'it should start with a moveto ("M" or "m")')
         invalid(' ', 'it should start with a moveto ("M" or "m")')

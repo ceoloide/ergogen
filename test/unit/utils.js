@@ -242,6 +242,25 @@ describe('Utils', function() {
             spy.firstCall.args[0].should.equal('M 10 0 h -10 a 5 5 0 0 1 10 0 z')
         })
 
+        it('repeated horizontal and vertical lines', async function() {
+            // makerjs reads only the first argument of "H" and "V", so repeats must match explicit commands
+            const outline = async paths => {
+                const model = (await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, paths}]}}, {debug: true})).outlines.o.yaml
+                return {bounds: extents(model), length: round(m.measure.modelPathLength(model))}
+            }
+            const unit = {bounds: [[0, -10], [10, 0]], length: 40}
+            for (const [repeated, explicit, expected] of [
+                ['M0 0H5 10V10H0Z', 'M0 0H5H10V10H0Z', unit],
+                ['M0 0h5 5v10h-10z', 'M0 0h5h5v10h-10z', unit],
+                ['M0 0V5 10H10V0Z', 'M0 0V5V10H10V0Z', unit],
+                ['M0 0v5 5h10v-10z', 'M0 0v5v5h10v-10z', unit],
+                ['M0 0h12 -2v10h-10z', 'M0 0h12h-2v10h-10z', {bounds: [[0, -10], [12, 0]], length: 42}],
+            ]) {
+                ;(await outline(explicit)).should.deep.equal(expected, explicit)
+                ;(await outline(repeated)).should.deep.equal(expected, repeated)
+            }
+        })
+
         it('every path is closed', async function() {
             // loose segments only
             await reject({paths: 'M 0 0 L 10 10'}, 'check failed for path 0')
