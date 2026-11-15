@@ -193,6 +193,8 @@ const parse_concat = (val, breadcrumbs) => {
             // a backslash always escapes the next character, so runs of backslashes pair up
             if (char === '\\') {
                 if (pos === val.length) break
+                // a backslash before a line terminator is not an escape, so it stays in the value
+                if (!/./.test(val[pos])) value += char
                 value += val[pos++]
             } else value += char
         }
@@ -232,7 +234,8 @@ const parse_concat = (val, breadcrumbs) => {
 const lookup = (root, path) => {
     let step = root
     for (const level of path.split('.')) {
-        if (step === null || typeof step !== 'object' || !Object.prototype.hasOwnProperty.call(step, level)) return undefined
+        // own properties of strings (like "length" or an index) are still readable
+        if (step === null || step === undefined || !Object.prototype.hasOwnProperty.call(step, level)) return undefined
         step = step[level]
     }
     return step

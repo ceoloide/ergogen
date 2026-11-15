@@ -351,6 +351,19 @@ describe('Prepare', function() {
         concat(String.raw`$concat("x\\", $concat(a, "\\"), b)`).should.equal(String.raw`x\foo\bar`)
     })
 
+    it('concat line terminators', function() {
+        const concat = res => p.concat({res}).res
+
+        // a backslash before a line terminator is kept, in both quote styles
+        for (const terminator of ['\n', '\r', '\u2028', '\u2029', '\r\n']) {
+            concat(`$concat("a\\${terminator}b")`).should.equal(`a\\${terminator}b`)
+            concat(`$concat('a\\${terminator}b')`).should.equal(`a\\${terminator}b`)
+        }
+
+        // an escaped backslash before a line terminator still pairs up
+        concat('$concat("a\\\\\nb")').should.equal('a\\\nb')
+    })
+
     it('concat syntax', function() {
         const config = {a: 'foo', b: 'bar', c: 'baz'}
         const concat = res => p.concat({...config, res}).res
@@ -367,6 +380,8 @@ describe('Prepare', function() {
         invalid('$concat(a b)').should.throw('unexpected "b"')
         invalid('$concat((a)').should.throw('unexpected "("')
         invalid('$concat(a(b))').should.throw('unexpected "("')
+        invalid('$concat("a""b")').should.throw('unexpected """')
+        invalid('$concat($concat(a)b)').should.throw('unexpected "b"')
 
         // a single quote character is not a literal
         invalid('$concat(")').should.throw('unterminated')
@@ -413,6 +428,7 @@ describe('Prepare', function() {
         // paths through primitives and inherited properties do not resolve
         p.concat.bind(this, {a: 'x', res: '$concat(a.b)'}).should.throw('Could not resolve reference "a.b"')
         p.concat.bind(this, {res: '$concat(constructor)'}).should.throw('Could not resolve reference')
+        p.concat.bind(this, {s: 'abc', res: '$concat(s.toString)'}).should.throw('Could not resolve reference "s.toString"')
 
         // a failed lookup does not mutate the config
         const config = {a: {}, res: '$concat(missing.sub, a.deeper.still)'}
@@ -422,7 +438,16 @@ describe('Prepare', function() {
         p.concat.bind(this, config2).should.throw('Could not resolve reference "a.deeper.still"')
         config2.should.deep.equal({a: {}, res: '$concat(a.deeper.still)'})
 
+        // paths through null or undefined values do not resolve
+        p.concat.bind(this, {nothing: null, res: '$concat(nothing.sub)'}).should.throw('Could not resolve reference "nothing.sub"')
+        p.concat.bind(this, {nothing: undefined, res: '$concat(nothing.sub)'}).should.throw('Could not resolve reference "nothing.sub"')
+
         // cycles through nested calls are still detected
         p.concat.bind(this, {a: '$concat("x", $concat(a))'}).should.throw('Circular dependency')
+    })
+
+    it('concat string properties', function() {
+        // own properties of a referenced string resolve
+        p.concat({s: 'abc', res: '$concat(s.length, "-", s.0)'}).res.should.equal('3-a')
     })
 })
