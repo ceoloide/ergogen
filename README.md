@@ -60,6 +60,9 @@ Until there's a proper "Getting started" guide, try getting acquainted with **Er
     - Preview in-development features
     - Use custom modifications
     - Contribute code
+
+    The CLI needs Node.js `^20.19.0 || ^22.12.0 || >=23`.
+    See [compatibility.md](compatibility.md) for 4.3.0 changes that can affect existing configs.
    
     <br>
 
