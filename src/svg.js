@@ -11,8 +11,10 @@ const a = require('./assert')
 //  - other visible geometry, transforms, clipping, masking, markers, filters and nested viewports are rejected
 //  - path data has to follow the svg path grammar, and is passed on with its tokens separated
 //  - css (style elements, display, visibility, stroke, fill) never selects or expands paths
-//  - every inline style declaration is checked for transforms and references, without a cascade, and
-//    comments or escapes in inline styles (which could hide a property name) are rejected
+//  - every inline style declaration is checked for the transform, rotate, scale, translate, clip-path, mask,
+//    marker(-start/-mid/-end) and filter properties, without a cascade, and comments, escapes or rule blocks
+//    ("@x{}") in inline styles are rejected, as they could hide a property name or a declaration boundary
+//  - other css properties (like "d", mask-image or offset-path) are not interpreted
 
 const svg_namespace = 'http://www.w3.org/2000/svg'
 
@@ -144,9 +146,10 @@ const parse_attributes = (raw, name) => {
 
 // every declaration of an inline style attribute, as [property, value] pairs (vendor prefixes and
 // "!important" removed), so that no later, duplicate or less important declaration can hide another one
+// (anything that would need a css tokenizer to split into declarations is rejected instead)
 const style_declarations = (style, qname, name) => {
     if (style === undefined) return []
-    a.assert(!style.includes('/*') && !style.includes('\\'), `SVG outline "${name}" has a comment or an escape in the style of <${qname}>, ` +
+    a.assert(!/\/\*|[\\@{}]/.test(style), `SVG outline "${name}" has a comment, an escape or a rule block in the style of <${qname}>, ` +
         'which is not supported! Remove it from the style before exporting.')
     const declarations = []
     for (const declaration of style.split(';')) {
