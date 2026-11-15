@@ -76,6 +76,16 @@ describe('Verify', function() {
         class Custom {}
         const cyclic = {points: {zones: {matrix: null}}}
         cyclic.points.again = cyclic.points
+        const sparse = [1]
+        sparse.length = 2
+        const cyclic_date = new Date(0)
+        cyclic_date.self = cyclic_date
+        const big_date = new Date(0)
+        big_date.big = 10n
+        const code_date = new Date(0)
+        code_date.fn = () => 1
+        const root_date = new Date(0)
+        root_date.points = {zones: {matrix: null}}
         const inputs = [
             ['points: &p\n  zones: {matrix: null}\n  again: *p', 'cyclic_value', '/points/again'],
             [cyclic, 'cyclic_value', '/points/again'],
@@ -84,7 +94,15 @@ describe('Verify', function() {
             [{points: {zones: {matrix: null}}, meta: {author: new Map([['a', 1]])}}, 'unsupported_value', '/meta/author', 'Map'],
             [{points: {zones: {matrix: null}}, meta: {author: Buffer.from('me')}}, 'unsupported_value', '/meta/author', 'Uint8Array'],
             [{points: {zones: {matrix: new Custom()}}}, 'unsupported_value', '/points/zones/matrix', 'Object'],
-            [new Map([['points', {}]]), 'unsupported_value', '', 'Map']
+            [new Map([['points', {}]]), 'unsupported_value', '', 'Map'],
+            // undefined values and array holes have no YAML or JSON form, and the engine skips them
+            [{points: {zones: {matrix: null}}, meta: {author: undefined}}, 'unsupported_value', '/meta/author', 'Undefined'],
+            [{points: {zones: {matrix: null}}, meta: {list: sparse}}, 'unsupported_value', '/meta/list/1', 'Undefined'],
+            // dates are plain values, so one with fields of its own, or at the root, isn't
+            [{points: {zones: {matrix: null}}, meta: {created: cyclic_date}}, 'unsupported_value', '/meta/created', 'Date'],
+            [{points: {zones: {matrix: null}}, meta: {created: big_date}}, 'unsupported_value', '/meta/created', 'Date'],
+            [{points: {zones: {matrix: null}}, meta: {created: code_date}}, 'unsupported_value', '/meta/created', 'Date'],
+            [root_date, 'unsupported_value', '', 'Date']
         ]
         for (const [raw, code, pointer, actual] of inputs) {
             const result = ergogen.verify(raw)
@@ -96,10 +114,10 @@ describe('Verify', function() {
         ergogen.verify(cyclic).diagnostics[0].message.should.equal('Value of field "points.again" contains itself!')
         ergogen.verify(new Map()).diagnostics[0].message.should.equal('Value of the config root isn\'t plain YAML or JSON data (got Map)!')
 
-        // shared but acyclic values, prototype-less objects and undefined fields are fine
+        // shared but acyclic values, prototype-less objects and plain dates are fine
         const prototypeless = Object.assign(Object.create(null), {zones: {matrix: null}})
         ergogen.verify('shared: &s {matrix: null}\npoints:\n  zones: *s\n  key: {tags: *s}').valid.should.be.true
-        ergogen.verify({points: prototypeless, meta: {author: undefined}}).valid.should.be.true
+        ergogen.verify({points: prototypeless, meta: {created: new Date(0)}}).valid.should.be.true
     })
 
     it('dates', async function() {
@@ -114,24 +132,42 @@ describe('Verify', function() {
         input.meta.created.should.equal(date)
     })
 
-    // everything a dotted path could reach outside of the config, compared by descriptor so that no getter runs
-    const prototypes = {Object, Array, String, Number, Boolean, Function}
-    const builtins = () => {
-        const snapshot = {}
-        for (const [name, type] of Object.entries(prototypes)) {
+    // every own property of the builtins a dotted path could reach, and of their methods, by descriptor (so that no
+    // getter runs), so that a test can show that nothing changed, and put back whatever did
+    const builtin_types = [Object, Array, String, Number, Boolean, Function, Date]
+    const fields = ['value', 'get', 'set', 'writable', 'enumerable', 'configurable']
+    const same = (one, other) => fields.every(name => Object.is(one[name], other[name]))
+    const snapshot = () => {
+        const targets = []
+        for (const type of builtin_types) {
+            targets.push([type.name, type.prototype])
             for (const key of Object.getOwnPropertyNames(type.prototype)) {
                 const value = Object.getOwnPropertyDescriptor(type.prototype, key).value
-                snapshot[`${name}.${key}`] = typeof value == 'function' ? Object.keys(value) : typeof value
+                if (typeof value == 'function') targets.push([`${type.name}.${key}`, value])
             }
         }
-        return snapshot
+        return targets.map(([name, target]) => ({name, target, props: new Map(
+            Object.getOwnPropertyNames(target).map(key => [key, Object.getOwnPropertyDescriptor(target, key)])
+        )}))
     }
-    const cleanup = () => {
-        for (const type of Object.values(prototypes)) {
-            for (const key of Object.getOwnPropertyNames(type.prototype)) {
-                const value = Object.getOwnPropertyDescriptor(type.prototype, key).value
-                if (['round4_probe', '$skip'].includes(key)) delete type.prototype[key]
-                else if (typeof value == 'function') delete value.round4_probe
+    const changes = before => {
+        const changed = []
+        for (const {name, target, props} of before) {
+            for (const key of new Set([...props.keys(), ...Object.getOwnPropertyNames(target)])) {
+                const now = Object.getOwnPropertyDescriptor(target, key)
+                if (!now || !props.has(key) || !same(now, props.get(key))) changed.push(`${name}.${key}`)
+            }
+        }
+        return changed
+    }
+    const restore = before => {
+        for (const {target, props} of before) {
+            for (const key of Object.getOwnPropertyNames(target)) {
+                if (!props.has(key)) delete target[key]
+            }
+            for (const [key, descriptor] of props) {
+                const now = Object.getOwnPropertyDescriptor(target, key)
+                if (!now || !same(now, descriptor)) Object.defineProperty(target, key, descriptor)
             }
         }
     }
@@ -140,34 +176,44 @@ describe('Verify', function() {
         // whatever a dotted path would reach through inherited values, like the object prototype or an object,
         // array, string or number method, is reported before the engine could follow it
         const outside = [
-            ['points.zones.matrix:\n__proto__.round4_probe: 1\n', 'unsafe_key', 'unnest', '/__proto__.round4_probe',
-                'Key "__proto__.round4_probe" within the config root would reach "__proto__", which isn\'t part of the config!'],
-            [{'points.zones.matrix': null, 'toString.round4_probe': 1}, 'unsafe_key', 'unnest', '/toString.round4_probe'],
+            ['points.zones.matrix:\n__proto__.verify_probe: 1\n', 'unsafe_key', 'unnest', '/__proto__.verify_probe',
+                'Key "__proto__.verify_probe" within the config root would reach "__proto__", which isn\'t part of the config!'],
+            [{'points.zones.matrix': null, 'toString.verify_probe': 1}, 'unsafe_key', 'unnest', '/toString.verify_probe'],
             [{'points.zones.matrix': null, 'toString.call': 1}, 'unsafe_key', 'unnest', '/toString.call'],
-            [{'points.zones.matrix': null, list: [1], 'list.push.round4_probe': 1}, 'unsafe_key', 'unnest', '/list.push.round4_probe'],
-            [{'points.zones.matrix': null, list: [1], 'list.foo.toString.round4_probe': 1}, 'unsafe_key', 'unnest', '/list.foo.toString.round4_probe'],
-            [{'points.zones.matrix': null, s: 'abc', 's.trim.round4_probe': 1}, 'unsafe_key', 'unnest', '/s.trim.round4_probe'],
-            [{'points.zones.matrix': null, s: 'abc', 's.0.trim.round4_probe': 1}, 'unsafe_key', 'unnest', '/s.0.trim.round4_probe'],
-            [{'points.zones.matrix': null, n: 5, 'n.toFixed.round4_probe': 1}, 'unsafe_key', 'unnest', '/n.toFixed.round4_probe'],
-            [{points: {zones: {matrix: null}, key: {'constructor.prototype.round4_probe': 1}}}, 'unsafe_key', 'unnest',
-                '/points/key/constructor.prototype.round4_probe',
-                'Key "constructor.prototype.round4_probe" within field "points.key" would reach "constructor", which isn\'t part of the config!'],
+            [{'points.zones.matrix': null, list: [1], 'list.push.verify_probe': 1}, 'unsafe_key', 'unnest', '/list.push.verify_probe'],
+            [{'points.zones.matrix': null, list: [1], 'list.foo.toString.verify_probe': 1}, 'unsafe_key', 'unnest', '/list.foo.toString.verify_probe'],
+            [{'points.zones.matrix': null, s: 'abc', 's.trim.verify_probe': 1}, 'unsafe_key', 'unnest', '/s.trim.verify_probe'],
+            [{'points.zones.matrix': null, s: 'abc', 's.0.trim.verify_probe': 1}, 'unsafe_key', 'unnest', '/s.0.trim.verify_probe'],
+            [{'points.zones.matrix': null, n: 5, 'n.toFixed.verify_probe': 1}, 'unsafe_key', 'unnest', '/n.toFixed.verify_probe'],
+            [{points: {zones: {matrix: null}, key: {'constructor.prototype.verify_probe': 1}}}, 'unsafe_key', 'unnest',
+                '/points/key/constructor.prototype.verify_probe',
+                'Key "constructor.prototype.verify_probe" within field "points.key" would reach "constructor", which isn\'t part of the config!'],
             // a dotted key can only extend an own field defined before it
             [{points: {zones: {matrix: null}, key: {'constructor.y': 2, constructor: {x: 1}}}}, 'unsafe_key', 'unnest', '/points/key/constructor.y'],
             // setting "__proto__" would replace a prototype instead
-            ['{"points": {"zones": {"matrix": null}}, "__proto__": {"round4_probe": 1}}', 'unsafe_key', 'unnest', '/__proto__'],
-            [{'points.zones.matrix': null, 'x.__proto__': {round4_probe: 1}}, 'unsafe_key', 'unnest', '/x.__proto__'],
+            ['{"points": {"zones": {"matrix": null}}, "__proto__": {"verify_probe": 1}}', 'unsafe_key', 'unnest', '/__proto__'],
+            [{'points.zones.matrix': null, 'x.__proto__': {verify_probe: 1}}, 'unsafe_key', 'unnest', '/x.__proto__'],
             // inheritance targets are checked once unnesting has settled them, wherever they came from
-            [{'points.zones.matrix': null, 'x.$extends': '__proto__.round4_probe.deep'}, 'unsafe_reference', 'inherit', '/x/$extends',
-                'Inheritance target "__proto__.round4_probe.deep" in field "x.$extends" would reach "__proto__", which isn\'t part of the config!'],
+            [{'points.zones.matrix': null, 'x.$extends': '__proto__.verify_probe.deep'}, 'unsafe_reference', 'inherit', '/x/$extends',
+                'Inheritance target "__proto__.verify_probe.deep" in field "x.$extends" would reach "__proto__", which isn\'t part of the config!'],
             ['a: {}\npoints.zones.matrix.$extends: a.__proto__.$skip.x\n', 'unsafe_reference', 'inherit', '/points/zones/matrix/$extends'],
-            [{points: {zones: {matrix: null}}, a: {}, x: {$extends: ['a']}, 'x.$extends.0': '__proto__.round4_probe.deep'},
+            [{points: {zones: {matrix: null}}, a: {}, x: {$extends: ['a']}, 'x.$extends.0': '__proto__.verify_probe.deep'},
                 'unsafe_reference', 'inherit', '/x/$extends/0'],
-            [{points: {zones: {matrix: {$extends: 'toString.round4_probe.x'}}}}, 'unsafe_reference', 'inherit', '/points/zones/matrix/$extends'],
+            [{points: {zones: {matrix: {$extends: 'toString.verify_probe.x'}}}}, 'unsafe_reference', 'inherit', '/points/zones/matrix/$extends'],
             [{points: {zones: {matrix: {$extends: ['a', 'list.push']}}}, a: {}, list: [1]}, 'unsafe_reference', 'inherit',
                 '/points/zones/matrix/$extends/1']
         ]
-        const before = builtins()
+        // undefined values and holes, which the engine would skip over, are rejected before unnesting
+        const sparse = [{k: 'str'}]
+        sparse.length = 2
+        const skipped = [
+            [{'points.zones.matrix': null, toString: undefined, 'toString.verify_probe': 1}, '/toString'],
+            [{'points.zones.matrix': null, a: {toString: undefined}, 'a.toString.verify_probe': 1}, '/a/toString'],
+            [{'points.zones.matrix': null, x: [{k: [1]}, undefined], 'x.1.k.map.verify_probe': 1}, '/x/1'],
+            [{'points.zones.matrix': null, x: sparse, 'x.1.k.trim.verify_probe': 1}, '/x/1'],
+            [{'points.zones.matrix': null, list: ['abc', undefined], 'list.1.trim.verify_probe': 1}, '/list/1']
+        ]
+        const before = snapshot()
         try {
             for (const [raw, code, stage, pointer, message] of outside) {
                 const result = ergogen.verify(raw)
@@ -175,43 +221,67 @@ describe('Verify', function() {
                 result.diagnostics.length.should.equal(1)
                 result.diagnostics[0].should.include({code, phase: 'preprocess', stage, pointer})
                 if (message) result.diagnostics[0].message.should.equal(message)
-                builtins().should.deep.equal(before)
+                changes(before).should.deep.equal([])
+            }
+            for (const [raw, pointer] of skipped) {
+                const result = ergogen.verify(raw)
+                result.checks.should.deep.equal(['parse'])
+                result.diagnostics.map(d => `${d.code} ${d.pointer}`).should.deep.equal([`unsupported_value ${pointer}`])
+                changes(before).should.deep.equal([])
             }
             // and later calls still work as before
             ergogen.verify(fixture('minimal.yml')).valid.should.be.true
             Object.keys((await ergogen.process(fixture('minimal.yml'))).points).should.deep.equal(['matrix_col_row'])
         } finally {
-            cleanup()
+            restore(before)
         }
     })
 
     it('own fields with builtin names', async function() {
         // fields the config owns can have any name, as long as "__proto__" isn't one of them
-        const config = {points: {zones: {matrix: null}, key: {
+        const config = () => ({points: {zones: {matrix: null}, key: {
             constructor: {x: 1}, 'constructor.y': 2, toString: 3, 'meta.prototype': 4, list: [1, 2], 'list.0': 9
-        }}}
-        const result = ergogen.verify(u.deepcopy(config))
+        }}})
+        const result = ergogen.verify(config())
         result.valid.should.be.true
         result.canonical.points.key.should.deep.equal({constructor: {x: 1, y: 2}, toString: 3, meta: {prototype: 4}, list: [9, 2]})
-        result.canonical.should.deep.equal((await ergogen.process(u.deepcopy(config), {debug: true})).canonical)
+        result.canonical.should.deep.equal((await ergogen.process(config(), {debug: true})).canonical)
     })
 
-    it('deeply nested inputs', function() {
-        // nesting, including through dotted keys, is bounded instead of exhausting the stack
-        const nest = depth => {
-            const root = {}
-            let level = root
-            for (let i = 0; i < depth; i++) level = level.a = {}
-            return root
+    it('bounded inputs', function() {
+        // nesting and size are bounded before every step that walks the config, so no step runs out of stack or memory
+        const nest = (depth, leaf={}) => {
+            let val = leaf
+            for (let i = 0; i < depth; i++) val = {a: val}
+            return val
         }
-        ergogen.verify({'points.zones.matrix': null, deep: nest(999)}).valid.should.be.true
-        const deep = ergogen.verify({'points.zones.matrix': null, deep: nest(20000)})
-        deep.checks.should.deep.equal(['parse'])
-        deep.diagnostics.length.should.equal(1)
-        deep.diagnostics[0].should.include({code: 'too_deep', phase: 'parse'})
-        deep.diagnostics[0].path.length.should.equal(1001)
-        const dotted = ergogen.verify({'points.zones.matrix': null, [Array(1001).fill('a').join('.')]: 1}).diagnostics[0]
-        dotted.should.include({code: 'too_deep', message: `Value of field "${Array(1001).fill('a').join('.')}" is nested deeper than 1000 levels!`})
+        const dots = count => Array(count).fill('a').join('.')
+        const report = raw => ergogen.verify(raw).diagnostics.map(d => [d.code, d.phase, d.stage, d.path.length])
+        ergogen.verify({'points.zones.matrix': null, deep: nest(255)}).valid.should.be.true
+        report({'points.zones.matrix': null, deep: nest(20000)}).should.deep.equal([['too_deep', 'parse', undefined, 257]])
+        ergogen.verify({'points.zones.matrix': null, [dots(257)]: 1}).diagnostics[0].should.include({
+            code: 'too_deep',
+            message: `Value of field "${dots(257)}" is nested deeper than 256 levels!`
+        })
+        // shared aliases count wherever they appear
+        let chain = 'points.zones.matrix:\ns0: &s0 {"' + dots(100) + '": 1}\n'
+        for (let i = 1; i < 4; i++) chain += `s${i}: &s${i} {"${dots(100)}": *s${i - 1}}\n`
+        // (each dotted key is one path segment, but a hundred levels deep)
+        report(chain).should.deep.equal([['too_deep', 'parse', undefined, 4], ['too_deep', 'parse', undefined, 4]])
+        let width = 'points.zones.matrix:\nl0: &l0 [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]\n'
+        for (let i = 1; i < 8; i++) width += `l${i}: &l${i} [${Array(10).fill(`*l${i - 1}`).join(', ')}]\n`
+        report(width)[0].slice(0, 3).should.deep.equal(['too_large', 'parse', undefined])
+        // and anything that preprocessing expands is checked again before the next step walks it
+        report({'points.zones.matrix': null, a: nest(200, 1), b: nest(200, {$extends: 'a'})})
+            .should.deep.equal([['too_deep', 'preprocess', 'inherit', 257]])
+        ergogen.verify('points.zones.matrix:\nlist: []\nlist.length: 1000000000\n').diagnostics.should.deep.equal([{
+            code: 'too_large',
+            phase: 'preprocess',
+            path: ['list'],
+            pointer: '/list',
+            message: 'The config has more than 100000 values by field "list"!',
+            stage: 'unnest'
+        }])
     })
 
     it('preprocessing errors', function() {
@@ -223,7 +293,11 @@ describe('Verify', function() {
             // dead ends within strings, or paths that aren't strings, are left to the engine, as they reach nothing
             [{'points.zones.matrix': null, s: 'abc', 's.missing.x': 1}, 'unnest', 'Cannot set properties of undefined'],
             [{points: {zones: {matrix: {$extends: 's.missing'}}}, s: 'abc'}, 'inherit', 'does not name a valid inheritance target'],
-            [{points: {zones: {matrix: {$extends: 5}}}}, 'inherit', 'is not a function']
+            [{points: {zones: {matrix: {$extends: 5}}}}, 'inherit', 'is not a function'],
+            // replaying the engine's unnesting fails where the engine itself would
+            ['points.zones.matrix:\nlist: []\nlist.length: -1\n', 'unnest', 'Invalid array length'],
+            ['points.zones.matrix:\nlist: []\nlist.length.x: 1\n', 'unnest', 'Invalid array length'],
+            ['points.zones.matrix:\nlist: []\nlist.length: abc\n', 'unnest', 'Invalid array length']
         ]
         for (const [raw, stage, snippet] of failing) {
             const result = ergogen.verify(raw)
@@ -255,6 +329,15 @@ describe('Verify', function() {
             {what: 'rectangle', where: true, size: 'side'},
             {what: 'circle', where: true, radius: 3, operation: 'subtract'}
         ])
+    })
+
+    it('emptied array slots', async function() {
+        // $unset can leave empty slots in inherited arrays, which end up just like when processing
+        const config = () => ({'points.zones.matrix': null, a: {list: [1, 2]}, b: {$extends: 'a', list: ['$unset']}})
+        const result = ergogen.verify(config())
+        result.valid.should.be.true
+        result.canonical.b.should.deep.equal({list: [null, 2]})
+        result.canonical.should.deep.equal((await ergogen.process(config(), {debug: true})).canonical)
     })
 
     it('independent structural errors', function() {

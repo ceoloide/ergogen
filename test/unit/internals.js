@@ -7,6 +7,7 @@ const io = require('../../src/io')
 const whats = require('../../src/outlines')._whats
 const yaml = require('js-yaml')
 const verify_lib = require('../../src/verify')
+const u = require('../../src/utils')
 
 describe('Internals', function() {
 
@@ -44,6 +45,16 @@ describe('Internals', function() {
         }
         verify_lib._compile.bind(this, Blocked).should.throw('Code generation from strings disallowed')
         verify_lib._compile.bind(this, Blocked).should.throw('content security policy that blocks code generation can cause this): Code generation from strings disallowed!')
+    })
+
+    it('verify when the structural check fails', function() {
+        // the bounds keep the copy and the check within the stack, but a failure is still reported, not thrown
+        sinon.stub(u, 'deepcopy').throws(new RangeError('Maximum call stack size exceeded'))
+        const result = ergogen.verify('points.zones.matrix:')
+        result.checks.should.deep.equal(['parse', 'preprocess', 'structure'])
+        result.diagnostics.should.deep.equal([
+            {code: 'structure_error', phase: 'structure', stage: 'schema', message: 'Maximum call stack size exceeded'}
+        ])
     })
 
     it('verify with unforeseen schema keywords', function() {

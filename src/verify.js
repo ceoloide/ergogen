@@ -6,8 +6,11 @@ const schema = require('../meta/schema.json')
 // keywords that describe one of several alternative forms of the same field
 const alternatives = ['type', 'enum', 'const', 'anyOf']
 
-// deeper inputs are reported instead of being walked, so that no step runs out of stack
-const max_depth = 1000
+// configs are bounded before every step that walks them recursively: 256 levels stay far below where any step
+// (or ajv) runs out of stack, even with a third of node's default stack, and the number of values bounds how far
+// shared YAML aliases, inheritance or array lengths can expand a config
+const max_depth = 256
+const max_values = 100000
 
 const kind = val => Array.isArray(val) ? 'array' : (val === null ? 'null' : typeof val)
 const plain = val => [Object.prototype, null].includes(Object.getPrototypeOf(val))
@@ -31,33 +34,43 @@ const located = (code, phase, pointer, message, extra) => Object.assign(
 // Input inspection
 //
 
-// verify accepts the data YAML can describe: plain objects and arrays, strings, numbers, booleans,
-// null (or undefined) and dates, which preprocessing turns into empty objects, just like when processing
-const inspect = (val, pointer, depth, ancestors, inspected, issues) => {
-    // dotted keys count too, as they nest just as deep once unnested, whatever their value
-    if (depth > max_depth) {
-        issues.push(located('too_deep', 'parse', pointer, `Value of ${field(pointer)} is nested deeper than ${max_depth} levels!`))
-        return
+// verify accepts finite plain data, as YAML or JSON describes it: a plain object at the root, plain objects and
+// dense arrays below, strings, numbers, booleans, null, and plain dates, which preprocessing turns into empty objects,
+// just like when processing (once the input is checked, a config is only checked for its size)
+const inspect = (config, phase, stage, check_values=true) => {
+    const issues = []
+    const ancestors = new Set()
+    let values = 0
+    let exhausted = false
+    const issue = (code, pointer, message, extra) => issues.push(located(code, phase, pointer, message, Object.assign({}, stage && {stage}, extra)))
+    const walk = (val, pointer, depth) => {
+        if (exhausted) return
+        // dotted keys count too, as they nest just as deep once unnested, whatever their value
+        if (depth > max_depth) return issue('too_deep', pointer, `Value of ${field(pointer)} is nested deeper than ${max_depth} levels!`)
+        // repeated aliases and inherited copies count as often as they appear, and arrays by their length
+        values += Array.isArray(val) ? val.length + 1 : 1
+        if (values > max_values) {
+            exhausted = true
+            return issue('too_large', pointer, `The config has more than ${max_values} values by ${field(pointer)}!`)
+        }
+        if (val === null || ['string', 'number', 'boolean'].includes(typeof val)) return
+        if (!check_values && typeof val != 'object') return
+        const date = val instanceof Date && depth > 0 && !Object.getOwnPropertyNames(val).length
+        if (check_values && !date && (typeof val != 'object' || !(Array.isArray(val) || plain(val)))) {
+            const type = Object.prototype.toString.call(val).slice(8, -1)
+            return issue('unsupported_value', pointer, `Value of ${field(pointer)} isn't plain YAML or JSON data (got ${type})!`, {actual: type})
+        }
+        if (ancestors.has(val)) return issue('cyclic_value', pointer, `Value of ${field(pointer)} contains itself!`)
+        ancestors.add(val)
+        // array slots are read by index, so that holes show up as undefined values
+        const entries = Array.isArray(val) ? Array.from({length: val.length}, (_, i) => [`${i}`, val[i]]) : Object.entries(val)
+        for (const [key, child] of entries) {
+            walk(child, `${pointer}/${escape(key)}`, depth + (Array.isArray(val) ? 1 : key.split('.').length))
+        }
+        ancestors.delete(val)
     }
-    if (val === null || ['string', 'number', 'boolean', 'undefined'].includes(typeof val) || val instanceof Date) return
-    if (typeof val != 'object' || !(Array.isArray(val) || plain(val))) {
-        const type = Object.prototype.toString.call(val).slice(8, -1)
-        issues.push(located('unsupported_value', 'parse', pointer,
-            `Value of ${field(pointer)} isn't plain YAML or JSON data (got ${type})!`, {actual: type}))
-        return
-    }
-    if (ancestors.has(val)) {
-        issues.push(located('cyclic_value', 'parse', pointer, `Value of ${field(pointer)} contains itself!`))
-        return
-    }
-    // shared values, like YAML aliases, only need checking once
-    if (inspected.has(val)) return
-    inspected.add(val)
-    ancestors.add(val)
-    for (const [key, child] of Object.entries(val)) {
-        inspect(child, `${pointer}/${escape(key)}`, depth + key.split('.').length, ancestors, inspected, issues)
-    }
-    ancestors.delete(val)
+    walk(config, '', 0)
+    return issues
 }
 
 //
@@ -316,34 +329,40 @@ exports.verify = raw => {
             `Input should be a YAML or JSON object, not ${type}, as JS code and KLE layouts can only be processed!`,
             {expected: {type: ['object']}, actual: type})])
     }
-    const issues = []
-    inspect(config, '', 0, new Set(), new Set(), issues)
+    let issues = inspect(config, 'parse')
     if (issues.length) return fail(issues)
     if (!Object.keys(config).length) return empty()
+
+    // anything that still throws while preprocessing or checking is reported, as config problems never throw
+    const attempt = (phase, stage, run) => {
+        try {
+            return run()
+        } catch (ex) {
+            issues = [{code: `${phase}_error`, phase, stage, message: ex.message}]
+        }
+    }
 
     // preprocessing, in the same order as the engine, which builds a new config from the input,
     // as long as its dotted keys and inheritance targets only lead into the config itself
     result.checks.push('preprocess')
-    unnest_issues(config, '', issues)
+    attempt('preprocess', 'unnest', () => unnest_issues(config, '', issues))
     if (issues.length) return fail(issues)
     for (const stage of prep.steps) {
         if (stage == 'inherit') {
             reference_issues(config, config, '', issues)
             if (issues.length) return fail(issues)
         }
-        try {
-            config = prep[stage](config)
-        } catch (ex) {
-            return fail([{code: 'preprocess_error', phase: 'preprocess', stage, message: ex.message}])
-        }
+        config = attempt('preprocess', stage, () => prep[stage](config))
+        // steps can expand the config, so its size is checked again before anything walks it
+        if (!issues.length) issues = inspect(config, 'preprocess', stage, false)
+        if (issues.length) return fail(issues)
     }
-    // the same copy the engine outputs as its canonical config
-    config = result.canonical = u.deepcopy(config)
-
-    // structure, as described by the schema
+    // structure, as described by the schema, on the same copy the engine outputs as its canonical config
+    // (compiling the schema is left to throw, as that's an environment problem rather than a config one)
     result.checks.push('structure')
     const validate_config = validator()
-    result.valid = validate_config(config)
+    result.valid = attempt('structure', 'schema', () => validate_config(result.canonical = u.deepcopy(config)))
+    if (issues.length) return fail(issues)
     result.diagnostics = result.valid ? [] : diagnose(validate_config.errors)
     return result
 }

@@ -20,13 +20,17 @@ if (!result.valid) {
 }
 ```
 
-It takes YAML or JSON text, or a config object holding the kind of data YAML describes:
+It takes YAML or JSON text, or a config object holding the kind of finite data YAML or JSON describes:
 
-- plain objects and arrays
-- strings, numbers, booleans, `null` or `undefined`
-- dates, which preprocessing turns into empty objects, just like when processing
+- a plain object at the root
+- plain objects and dense arrays below it
+- strings, numbers, booleans and `null`
+- plain dates (without fields of their own), which preprocessing turns into empty objects, just like when processing
 
-Anything else is reported instead of being converted, like cyclic data, functions, `BigInt`s, `Map`s, buffers or class instances, and so is nesting deeper than 1000 levels.
+Anything else is reported instead of being converted, like `undefined` values, array holes, cyclic data, functions, `BigInt`s, `Map`s, buffers or class instances.
+So is a config nested deeper than 256 levels (dotted keys count every level) or holding more than 100000 values (repeated YAML aliases count every time, and arrays by their length).
+These bounds keep every step far below where it would run out of stack or memory.
+They're checked on the input, and again after each preprocessing step, as aliases, inheritance or array lengths can expand a config.
 
 The engine follows dotted keys and `$extends` paths through anything a value has, including what it inherits.
 So `verify` only lets them into data the config owns:
@@ -36,7 +40,8 @@ So `verify` only lets them into data the config owns:
 
 JS code and KLE layouts can only be used with `ergogen.process`, as verifying them would mean running or converting them.
 Bundles aren't supported either.
-The input is never modified.
+For supported data, the input and the builtins are never modified.
+Getters and proxies aren't supported data, so there's no such guarantee for them.
 
 Config problems never throw.
 `verify` only throws when it can't run at all: when Ajv is missing, or when a content security policy keeps it from compiling the schema.
@@ -67,10 +72,11 @@ Depending on the problem, it also has:
 | `invalid_root` | `parse` | The config isn't an object (`actual` holds its type) |
 | `cyclic_value` | `parse` | A value contains itself |
 | `unsupported_value` | `parse` | A value isn't plain YAML or JSON data (`actual` holds its type) |
-| `too_deep` | `parse` | A value is nested deeper than 1000 levels, counting dotted keys |
+| `too_deep` | `parse` or `preprocess` | A value is nested deeper than 256 levels, counting dotted keys |
+| `too_large` | `parse` or `preprocess` | The config holds more than 100000 values |
 | `unsafe_key` | `preprocess` | A dotted key would reach something the config doesn't own |
 | `unsafe_reference` | `preprocess` | An `$extends` path would reach something the config doesn't own |
-| `preprocess_error` | `preprocess` | `$extends`, `$params` or `$concat` failed |
+| `preprocess_error` | `preprocess` | A preprocessing step failed, like `$extends`, `$params` or `$concat` |
 | `missing_field` | `structure` | A required field is missing |
 | `unexpected_field` | `structure` | A field isn't allowed there |
 | `reserved_field` | `structure` | A key-level field uses a reserved name |
@@ -80,6 +86,7 @@ Depending on the problem, it also has:
 | `invalid_length` | `structure` | An array or string is too short or too long |
 | `invalid_format` | `structure` | A string doesn't match the expected format |
 | `invalid_config` | `structure` | Any other structural problem |
+| `structure_error` | `structure` | The structural check itself failed (within the bounds, it shouldn't) |
 
 ### Example
 
