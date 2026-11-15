@@ -327,14 +327,14 @@ describe('Schema', function() {
     })
 
     it('accepts any shape, footprint and template, built-in or injected', async function() {
-        // names can be new or replace an injectable built-in (the core shapes like "rectangle" always win
-        // the lookup), and either way their fields and params are their own
+        // names can be new or replace a built-in, and either way their fields and params are their own
         const plugins = {
             points: {zones: {matrix: null}, mirror: 30},
             outlines: {
                 shapes: [
                     {what: 'my_shape', where: true, side: 2},
-                    {what: 'choc_hotswap_socket', where: true, side: 4, operation: 'stack'}
+                    {what: 'choc_hotswap_socket', where: true, side: 4, operation: 'stack'},
+                    {what: 'rectangle', where: true, side: 6, operation: 'stack'}
                 ]
             },
             pcbs: {
@@ -355,7 +355,7 @@ describe('Schema', function() {
 
         // but with injections in place (restored afterwards) the engine can
         const registries = {
-            outline: require('../../src/outlines/index'),
+            outline: require('../../src/outlines')._whats,
             footprint: require('../../src/footprints'),
             template: require('../../src/templates')
         }
@@ -375,6 +375,7 @@ describe('Schema', function() {
         const injections = [
             ['outline', 'my_shape', square],
             ['outline', 'choc_hotswap_socket', square],
+            ['outline', 'rectangle', square],
             ['footprint', 'my_footprint', labeled],
             ['footprint', 'mx', labeled],
             ['template', 'kicad8', template],
@@ -398,8 +399,8 @@ describe('Schema', function() {
 
         // the registries are back to their previous entries, without the new names
         for (const [type, name, value] of saved) {
-            if (value === undefined) registries[type].should.not.have.property(name)
-            else registries[type][name].should.equal(value)
+            if (value === undefined) expect(registries[type]).to.not.have.property(name)
+            else expect(registries[type][name]).to.equal(value)
         }
     })
 
