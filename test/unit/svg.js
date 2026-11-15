@@ -1,10 +1,12 @@
 const fs = require('fs')
 const path = require('path')
+const url = require('url')
 const m = require('makerjs')
 const yaml = require('js-yaml')
 const jszip = require('jszip')
 const svg_lib = require('../../src/svg')
 const io = require('../../src/io')
+const u = require('../../src/utils')
 const ergogen = require('../../src/ergogen')
 
 describe('SVG', function() {
@@ -40,6 +42,18 @@ describe('SVG', function() {
         }
         const results = await ergogen.process(config_text, {debug: true})
         return measure(results.outlines.o.yaml)
+    }
+
+    const build_config = async () => (await import(url.pathToFileURL(path.join(__dirname, '..', '..', 'rollup.config.mjs')).href)).default
+    const build_plugin = async () => (await build_config()).plugins.find(plugin => plugin.name == 'svg-outline-plugin')
+
+    // the build transform, with its emitted path data run through the same outline factory
+    const via_build = async text => {
+        const plugin = await build_plugin()
+        const result = plugin.transform(text, '/anywhere/svg_build_test.svg')
+        const paths = JSON.parse(/^\s*const paths = (.*?);?$/m.exec(result.code)[1])
+        const [maker] = u.svg_paths_to_outline(paths, {}, 'svg_build_test', {}, {}, {})
+        return measure(maker({meta: {mirrored: false}})[0])
     }
 
     const accepted = {
@@ -125,8 +139,9 @@ describe('SVG', function() {
         svg_lib.tolerance.should.equal(1e-4)
     })
 
-    const runners = {'bundle loading': via_bundle}
-    const scope = {'bundle loading': 'svg_bundle_test'}
+    // the same fixtures must give the same results when loaded from a bundle and when built
+    const runners = {'bundle loading': via_bundle, 'build transform': via_build}
+    const scope = {'bundle loading': 'svg_bundle_test', 'build transform': 'svg_build_test'}
     for (const [runner_name, run] of Object.entries(runners)) {
         describe(runner_name, function() {
             for (const [title, [text, expected]] of Object.entries(accepted)) {
@@ -147,6 +162,10 @@ describe('SVG', function() {
         })
     }
 
+    it('build transform skips other files', async function() {
+        should.equal((await build_plugin()).transform('const x = 1', '/anywhere/x.js'), null)
+    })
+
     it('ergogen export reimport', async function() {
         const config = {
             points: {zones: {matrix: null}},
@@ -162,5 +181,52 @@ describe('SVG', function() {
         // exports are positioned at the origin and rounded to 3 decimals, so compare sizes to 0.01mm
         const size = ({low, high, chains}) => ({size: [0, 1].map(i => Number((high[i] - low[i]).toFixed(2))), chains})
         size(await via_bundle(results.outlines.o.svg)).should.deep.equal(size(original))
+        size(await via_build(results.outlines.o.svg)).should.deep.equal(size(original))
+    })
+
+    it('bundled build execution', async function() {
+        const rollup = require('rollup')
+        const json = require('@rollup/plugin-json')
+        const commonjs = require('@rollup/plugin-commonjs')
+        const config = await build_config()
+        const plugin = await build_plugin()
+        const ergogen_path = path.join(__dirname, '..', '..', 'src', 'ergogen.js')
+        const entries = {
+            'cjs_entry.js': `const ergogen = require(${JSON.stringify(ergogen_path)})\n` +
+                `ergogen.inject('outline', 'built', require(${JSON.stringify(fixture_svg)}))\n` +
+                'module.exports = ergogen',
+            'esm_entry.js': `import ergogen from ${JSON.stringify(ergogen_path)}\n` +
+                `import built from ${JSON.stringify(fixture_svg)}\n` +
+                'ergogen.inject(\'outline\', \'built\', built)\n' +
+                'export default ergogen',
+        }
+        for (const [entry, code] of Object.entries(entries)) {
+            const id = path.join(__dirname, entry)
+            const virtual = {
+                name: 'virtual-entry',
+                resolveId: source => source == entry ? id : null,
+                load: source => source == id ? code : null
+            }
+            const bundle = await rollup.rollup({input: entry, external: config.external, plugins: [virtual, plugin, json(), commonjs()]})
+            const {output} = await bundle.generate({...config.output, file: undefined})
+            await bundle.close()
+
+            // browser-like umd execution: no require, module, exports or define, with the declared globals in this realm
+            const root = {}
+            for (const [dependency, global] of Object.entries(config.output.globals)) {
+                root[global] = require(dependency)
+            }
+            new Function('globalThis', 'self', 'global', 'require', 'module', 'exports', 'define', output[0].code).call(root, root, root, root)
+            root.ergogen.process.should.be.a('function')
+            const results = await root.ergogen.process({
+                points: {zones: {matrix: {columns: {left: null, right: null}}}},
+                outlines: {o: [{what: 'built', where: true}]}
+            }, {debug: true})
+            const chains = m.model.findChains(results.outlines.o.yaml).map(chain => measure(m.chain.toNewModel(chain))).sort((x, y) => x.low[0] - y.low[0])
+            chains.should.deep.equal([
+                {low: [0, -6.7], high: [14.2, 0], chains: 1},
+                {low: [19, -6.7], high: [33.2, 0], chains: 1},
+            ], entry)
+        }
     })
 })
