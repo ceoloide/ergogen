@@ -17,7 +17,7 @@ describe('Schema', function() {
     this.timeout(30000)
     this.slow(10000)
 
-    // strictRequired would flag params that are required next to an allOf $ref
+    // strictRequired would flag the ref/aggregate exclusion, which names fields defined elsewhere
     const validate = new Ajv({strict: true, allowUnionTypes: true, strictRequired: false, allErrors: true}).compile(schema)
     const violations = config => validate(config) ? [] : validate.errors.map(e => `${e.instancePath} ${e.message}`)
 
@@ -35,12 +35,6 @@ describe('Schema', function() {
         }
         return ''
     }
-
-    // built-ins, as the registries themselves also contain the injected test-only entries
-    const builtins = dir => fs.readdirSync(path.join(root, 'src', dir))
-        .filter(file => file != 'index.js')
-        .map(file => path.basename(file, '.js'))
-        .sort()
 
     it('accepts every valid test config', function() {
         const inputs = glob.sync('test/{points,outlines,cases,pcbs,footprints}/*.yaml', {cwd: root})
@@ -189,40 +183,36 @@ describe('Schema', function() {
             [{points: {zones: {matrix: {anchor: {aggregate: {method: 'median'}}}}}}, 'Unknown aggregator method', '/points/zones/matrix/anchor'],
             [{points: {zones: {matrix: {anchor: {shift: [1, 1], affect: 'xz'}}}}}, 'should be one of', '/points/zones/matrix/anchor'],
             [{points: {zones: {matrix: {anchor: {ref: 'matrix_one_only', aggregate: {parts: []}}}}}}, 'cannot appear together', '/points/zones/matrix/anchor'],
-            // outlines
-            [{outlines: {bad: [{what: 'svg'}]}}, 'must be a string or an array', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'svg', paths: []}]}}, 'must have at least one path', '/outlines/bad/0'],
-            // the engine fails on an empty path without a validation message, so any error will do
-            [{outlines: {bad: [{what: 'svg', paths: ['']}]}}, '', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'choc_hotswap_socket', origin: 5}]}}, 'should be an array', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'svg', paths: 'M 0 0 L 1 0 L 1 1 Z', flip_vertically: 'yes'}]}}, 'should be of type boolean', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'choc_hotswap_socket', size: 5}]}}, 'Unexpected key "size"', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'rectangle', size: 5, radius: 5}]}}, 'Unexpected key "radius"', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'circle'}]}}, 'should be of type number', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'outline'}]}}, 'does not name an existing outline', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'circle', radius: 5, operation: 'union'}]}}, 'should be one of', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'circle', radius: 5, expand: 1, joints: 3}]}}, 'should be one of', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'circle', radius: 5, where: [true, shift(1)]}]}}, 'should be of type object', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'hull', points: ['matrix_one_only'], extend: 'yes'}]}}, 'should be of type boolean', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'path', segments: [{type: 'spline', points: [shift(0), shift(10)]}]}]}}, 'should be one of', '/outlines/bad/0'],
-            [{outlines: {bad: [{what: 'path', segments: [{type: 'line', points: [shift(0), shift(10)], accuracy: 1}]}]}}, 'Unexpected key "accuracy"', '/outlines/bad/0'],
+            // outline parts, as far as the engine handles them for every shape
+            [{outlines: {bad: [5]}}, 'should be of type object', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 5}]}}, 'should be one of', '/outlines/bad/0/what'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, operation: 'union'}]}}, 'should be one of', '/outlines/bad/0/operation'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, asym: 'middle'}]}}, 'should be one of', '/outlines/bad/0/asym'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, where: 5}]}}, 'Unexpected type "number"', '/outlines/bad/0/where'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, where: [true, shift(1)]}]}}, 'should be of type object', '/outlines/bad/0/where'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, adjust: {foo: 1}}]}}, 'Unexpected key "foo"', '/outlines/bad/0/adjust'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, expand: 1, joints: 3}]}}, 'should be one of', '/outlines/bad/0/joints'],
+            [{outlines: {bad: [{what: 'circle', radius: 5, fillet: {}}]}}, 'should be of type number', '/outlines/bad/0/fillet'],
             // cases
             [{cases: {bad: [{extrude: 1}]}}, 'should be of type string', '/cases/bad/0'],
             [{cases: {bad: [{name: 'box', where: true}]}}, 'Unexpected key "where"', '/cases/bad/0'],
             [{cases: {bad: ['^box']}}, 'should be one of', '/cases/bad/0'],
             [{cases: {bad: [{name: 'box', shift: [1, 2]}]}}, 'should be an array of length 3', '/cases/bad/0'],
             [{cases: {ok: ['box'], bad: [{what: 'case', name: 'ok', extrude: 5}]}}, 'should not be used when what=case', '/cases/bad/0'],
-            // pcbs and footprints
+            // pcbs and footprints, as far as the engine handles them for every template and footprint
             [{pcbs: {main: {foo: 1}}}, 'Unexpected key "foo"', '/pcbs/main'],
             [{pcbs: {main: {references: 'yes'}}}, 'should be of type boolean', '/pcbs/main/references'],
+            [{pcbs: {main: {template: 5}}}, 'should be one of', '/pcbs/main/template'],
+            [{pcbs: {main: {outlines: [{layer: 'F.SilkS'}]}}}, 'should be one of', '/pcbs/main/outlines/0'],
+            [{pcbs: {main: {footprints: ['via']}}}, 'should be of type object', '/pcbs/main/footprints/0'],
             [{pcbs: {main: {footprints: [{where: true}]}}}, 'should be one of', '/pcbs/main/footprints/0'],
             [{pcbs: {main: {footprints: [{what: 'via', foo: 1, params: {net: 'GND'}}]}}}, 'Unexpected key "foo"', '/pcbs/main/footprints/0'],
-            [{pcbs: {main: {footprints: [{what: 'via', params: {net: 'GND', foo: 1}}]}}}, 'Unexpected key "foo"', '/pcbs/main/footprints/0/params'],
-            [{pcbs: {main: {footprints: [{what: 'via', params: {net: 5}}]}}}, 'should be of type string', '/pcbs/main/footprints/0/params/net'],
-            [{pcbs: {main: {footprints: [{what: 'mx', params: {from: 'A'}}]}}}, 'should be of type string', '/pcbs/main/footprints/0/params'],
+            [{pcbs: {main: {footprints: [{what: 'via', where: 5, params: {net: 'GND'}}]}}}, 'Unexpected type "number"', '/pcbs/main/footprints/0/where'],
+            [{pcbs: {main: {footprints: [{what: 'via', asym: 'middle', params: {net: 'GND'}}]}}}, 'should be one of', '/pcbs/main/footprints/0/asym'],
+            [{pcbs: {main: {footprints: [{what: 'via', params: 'GND'}]}}}, 'should be of type object', '/pcbs/main/footprints/0/params'],
             [
-                {points: {mirror: 30}, pcbs: {main: {footprints: [{what: 'via', where: true, asym: 'both', params: {net: 'GND', mirror: {foo: 1}}}]}}},
-                'Unexpected key "foo"', '/pcbs/main/footprints/0/params/mirror'
+                {points: {mirror: 30}, pcbs: {main: {footprints: [{what: 'via', where: true, asym: 'both', params: {net: 'GND', mirror: 'x'}}]}}},
+                'should be of type object', '/pcbs/main/footprints/0/params/mirror'
             ]
         ]
 
@@ -305,30 +295,25 @@ describe('Schema', function() {
         ;(await engine_error(relabeled)).should.equal('')
     })
 
-    it('documents where static checks differ from the engine', async function() {
-        // mirror overrides only reach mirrored points, so a net set only there is accepted
-        const mirror_only = {
-            points: {zones: {matrix: null}, mirror: 30},
-            pcbs: {main: {footprints: [{what: 'via', where: true, asym: 'both', params: {mirror: {net: 'GND'}}}]}}
+    it('leaves names, fields and params of shapes, footprints and templates to the engine', async function() {
+        // whatever a registered shape, footprint or template does with its own fields is checked at runtime
+        const points = {zones: {matrix: null}}
+        const runtime = [
+            [{outlines: {bad: [{what: 'square'}]}}, 'should be one of'],
+            [{outlines: {bad: [{what: 'rectangle', size: 5, radius: 5}]}}, 'Unexpected key "radius"'],
+            [{outlines: {bad: [{what: 'circle'}]}}, 'should be of type number'],
+            [{pcbs: {main: {template: 'kicad9'}}}, 'should be one of'],
+            [{pcbs: {main: {footprints: [{what: 'via', params: {net: 'GND', foo: 1}}]}}}, 'Unexpected key "foo"'],
+            [{pcbs: {main: {footprints: [{what: 'via'}]}}}, 'should be of type string']
+        ]
+        for (const [config, snippet] of runtime) {
+            violations({points, ...config}).should.deep.equal([])
+            ;(await engine_error({points, ...config})).should.include(snippet)
         }
-        violations(mirror_only).should.deep.equal([])
-        ;(await engine_error(mirror_only)).should.include('should be of type string')
+    })
 
-        // only an explicit "where: false" skips required nets, not a filter that happens to match nothing
-        const unmatched = {
-            points: {zones: {matrix: null}},
-            pcbs: {main: {footprints: [{what: 'via', where: 'nothing'}]}}
-        }
-        violations(unmatched).should.not.deep.equal([])
-        ;(await engine_error(unmatched)).should.equal('')
-
-        // outlines can be injected, so any shape name is accepted
-        const unknown = {points: {zones: {matrix: null}}, outlines: {bad: [{what: 'square'}]}}
-        violations(unknown).should.deep.equal([])
-        ;(await engine_error(unknown)).should.include('should be one of')
-
-        // mirror overrides are checked per level, while the engine only checks the merged override
-        // when the key is actually mirrored
+    it('checks mirror overrides per level', async function() {
+        // the engine only checks the merged override, and only when the key is actually mirrored
         const mirrored = {'points.mirror': 100, 'points.zones.matrix.columns.c': {}}
         const inert = {'points.zones.matrix': {}, 'points.key.mirror': 'oops'}
         violations(prep.unnest(inert)).should.not.deep.equal([])
@@ -341,50 +326,77 @@ describe('Schema', function() {
         ;(await engine_error(nothing_to_unset)).should.include('mirror.zone" should be of type object')
     })
 
-    it('matches the built-in registries', async function() {
-        const defs = schema.definitions
-
-        // outline shapes, from the engine's own list minus the test-only injections
-        const injected = Object.keys(require('../../src/outlines/index'))
-            .filter(name => !builtins('outlines').includes(name))
-        const probe = await engine_error({points: {zones: {matrix: null}}, outlines: {probe: [{what: '_'}]}})
-        const shapes = probe.match(/\[(.*)\]/)[1].split(', ').filter(name => !injected.includes(name))
-        defs.outline_part_object.properties.what.anyOf[0].enum.should.deep.equal(shapes)
-        defs.outline_part_object.allOf.map(cond => cond.if.properties.what.const).should.have.members(shapes)
-
-        // footprint names, params and their types
-        const footprint_names = defs.footprint.properties.what.anyOf[0].enum
-        footprint_names.should.deep.equal(builtins('footprints'))
-        const typed = defs.footprint.allOf.filter(cond => cond.if.properties.what)
-        typed.map(cond => cond.if.properties.what.const).should.deep.equal(footprint_names)
-        const requiring = defs.footprint.allOf.find(cond => cond.else).else.allOf
-            .map(cond => cond.if.properties.what.const)
-        for (const name of footprint_names) {
-            const params = require(`../../src/footprints/${name}`).params
-
-            // nets without a default are required, either directly or through mirror overrides
-            const nets = Object.keys(params).filter(param => params[param] === undefined)
-            const nets_def = defs[`footprint_nets_${name}`]
-            if (nets.length) {
-                requiring.should.include(name)
-                nets_def.allOf.map(cond => cond.anyOf[0].required[0]).should.deep.equal(nets)
-                nets_def.allOf.map(cond => cond.anyOf[1].properties.mirror.required[0]).should.deep.equal(nets)
-            } else {
-                requiring.should.not.include(name)
-                should.not.exist(nets_def)
-            }
-
-            const props = defs[`footprint_params_${name}`].properties
-            Object.keys(props).should.deep.equal(Object.keys(params).concat('mirror'))
-            for (const [param, def] of Object.entries(params)) {
-                let type = def === undefined ? 'net' : a.type(def)()
-                if (type == 'object') type = def.type
-                props[param].$ref.should.equal(`#/definitions/footprint_param_${type}`)
+    it('accepts any shape, footprint and template, built-in or injected', async function() {
+        // names can be new or replace a built-in, and their fields and params are their own
+        const plugins = {
+            points: {zones: {matrix: null}, mirror: 30},
+            outlines: {
+                shapes: [
+                    {what: 'my_shape', where: true, side: 2},
+                    {what: 'choc_hotswap_socket', where: true, side: 4, operation: 'stack'}
+                ]
+            },
+            pcbs: {
+                main: {
+                    template: 'kicad8',
+                    params: {secret: 42},
+                    footprints: [
+                        {what: 'my_footprint', params: {label: 'new'}},
+                        {what: 'mx', where: true, asym: 'both', params: {label: 'source', net: 'GND', mirror: {label: 'clone'}}}
+                    ]
+                }
             }
         }
+        violations(plugins).should.deep.equal([])
+        // the built-ins alone can't process it
+        ;(await engine_error(plugins)).should.include('should be one of')
 
-        // pcb templates
-        defs.pcb.properties.template.anyOf[0].enum.should.deep.equal(builtins('templates'))
+        // but with injections in place (restored afterwards) the engine can
+        const registries = {
+            outline: require('../../src/outlines/index'),
+            footprint: require('../../src/footprints'),
+            template: require('../../src/templates')
+        }
+        const square = (config, name, points, outlines, units) => {
+            const side = a.sane(config.side, `${name}.side`, 'number')(units)
+            const half = side / 2
+            return [() => [u.rect(side, side, [-half, -half]), {low: [-half, -half], high: [half, half]}], units]
+        }
+        const labeled = {
+            params: {designator: 'L', label: '', net: {type: 'net', value: 'GND'}},
+            body: p => `(labeled ${p.at} "${p.label}" ${p.net})`
+        }
+        const template = {
+            convert_outline: () => '',
+            body: params => `custom ${params.custom.secret}\n${params.footprints.join('\n')}`
+        }
+        const injections = [
+            ['outline', 'my_shape', square],
+            ['outline', 'choc_hotswap_socket', square],
+            ['footprint', 'my_footprint', labeled],
+            ['footprint', 'mx', labeled],
+            ['template', 'kicad8', template]
+        ]
+        const saved = injections.map(([type, name]) => [type, name, registries[type][name]])
+        try {
+            for (const [type, name, value] of injections) ergogen.inject(type, name, value)
+            const results = await ergogen.process(u.deepcopy(plugins))
+            Object.keys(results.outlines).should.deep.equal(['shapes'])
+            const pcb = results.pcbs.main
+            pcb.should.include('custom 42')
+            for (const label of ['new', 'source', 'clone']) pcb.should.include(`"${label}"`)
+        } finally {
+            for (const [type, name, value] of saved) {
+                if (value === undefined) delete registries[type][name]
+                else registries[type][name] = value
+            }
+        }
+        // and the registries are back to their built-ins
+        ;(await engine_error(plugins)).should.include('should be one of')
+    })
+
+    it('matches the engine defaults and aliases', function() {
+        const defs = schema.definitions
 
         // default units
         Object.keys(defs.units.properties).should.deep.equal(Object.keys(units_lib.parse({})))

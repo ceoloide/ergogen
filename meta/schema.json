@@ -150,17 +150,39 @@
             "description": "Unit values, merged onto the defaults (null keeps the default)",
             "type": ["object", "null"],
             "properties": {
-                "U": {"$ref": "#/definitions/nullable_number"},
-                "u": {"$ref": "#/definitions/nullable_number"},
-                "cx": {"$ref": "#/definitions/nullable_number"},
-                "cy": {"$ref": "#/definitions/nullable_number"},
-                "$default_stagger": {"$ref": "#/definitions/nullable_number"},
-                "$default_spread": {"$ref": "#/definitions/nullable_number"},
-                "$default_splay": {"$ref": "#/definitions/nullable_number"},
-                "$default_height": {"$ref": "#/definitions/nullable_number"},
-                "$default_width": {"$ref": "#/definitions/nullable_number"},
-                "$default_padding": {"$ref": "#/definitions/nullable_number"},
-                "$default_autobind": {"$ref": "#/definitions/nullable_number"}
+                "U": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "u": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "cx": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "cy": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_stagger": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_spread": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_splay": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_height": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_width": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_padding": {
+                    "$ref": "#/definitions/nullable_number"
+                },
+                "$default_autobind": {
+                    "$ref": "#/definitions/nullable_number"
+                }
             },
             "additionalProperties": {
                 "$ref": "#/definitions/nullable_number"
@@ -268,13 +290,27 @@
                         "required": ["ref", "aggregate"]
                     },
                     "properties": {
-                        "ref": {"$ref": "#/definitions/anchor_object/properties/ref"},
-                        "aggregate": {"$ref": "#/definitions/anchor_object/properties/aggregate"},
-                        "orient": {"$ref": "#/definitions/anchor_object/properties/orient"},
-                        "shift": {"$ref": "#/definitions/anchor_object/properties/shift"},
-                        "rotate": {"$ref": "#/definitions/anchor_object/properties/rotate"},
-                        "affect": {"$ref": "#/definitions/anchor_object/properties/affect"},
-                        "resist": {"$ref": "#/definitions/anchor_object/properties/resist"},
+                        "ref": {
+                            "$ref": "#/definitions/anchor_object/properties/ref"
+                        },
+                        "aggregate": {
+                            "$ref": "#/definitions/anchor_object/properties/aggregate"
+                        },
+                        "orient": {
+                            "$ref": "#/definitions/anchor_object/properties/orient"
+                        },
+                        "shift": {
+                            "$ref": "#/definitions/anchor_object/properties/shift"
+                        },
+                        "rotate": {
+                            "$ref": "#/definitions/anchor_object/properties/rotate"
+                        },
+                        "affect": {
+                            "$ref": "#/definitions/anchor_object/properties/affect"
+                        },
+                        "resist": {
+                            "$ref": "#/definitions/anchor_object/properties/resist"
+                        },
                         "distance": {
                             "description": "Distance between the anchor and its mirror image",
                             "$ref": "#/definitions/number"
@@ -488,7 +524,14 @@
                 },
                 "adjust": {
                     "description": "Independent adjustment of this key only, as an anchor relative to its position",
-                    "anyOf": [{"$ref": "#/definitions/anchor"}, {"type": "null"}]
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/anchor"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
                 },
                 "width": {
                     "$ref": "#/definitions/nullable_number"
@@ -514,7 +557,14 @@
                 },
                 "asym": {
                     "description": "Whether the key exists on the source side, the mirrored side, or both",
-                    "anyOf": [{"$ref": "#/definitions/asym"}, {"type": "null"}]
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/asym"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
                 },
                 "colrow": {
                     "description": "Template for the column-row identifier",
@@ -573,15 +623,8 @@
             "type": "object",
             "properties": {
                 "what": {
-                    "description": "Shape type (built-in or injected)",
-                    "anyOf": [
-                        {
-                            "enum": ["rectangle", "circle", "polygon", "outline", "path", "hull", "svg", "choc_hotswap_socket"]
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
+                    "description": "Shape name, built-in or injected",
+                    "type": "string",
                     "default": "outline"
                 },
                 "operation": {
@@ -632,242 +675,7 @@
                     "$ref": "#/definitions/number"
                 }
             },
-            "allOf": [
-                {
-                    "if": {"properties": {"what": {"const": "rectangle"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "size": {
-                                "description": "Width and height (exposed as sx/sy units to corner, bevel, where and adjust)",
-                                "$ref": "#/definitions/wh"
-                            },
-                            "corner": {
-                                "description": "Corner radius",
-                                "$ref": "#/definitions/number"
-                            },
-                            "bevel": {
-                                "description": "Corner bevel, can be combined with corner",
-                                "$ref": "#/definitions/number"
-                            }
-                        },
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "circle"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "radius": {
-                                "description": "Radius (exposed as the r unit to where and adjust)",
-                                "$ref": "#/definitions/number"
-                            }
-                        },
-                        "required": ["radius"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "polygon"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "points": {
-                                "description": "Polygon corners, each anchored relative to the previous one",
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/anchor"
-                                }
-                            }
-                        },
-                        "required": ["points"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "outline"}}},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "name": {
-                                "description": "Name of a previously defined outline",
-                                "type": "string"
-                            },
-                            "origin": {
-                                "description": "Anchor in the referenced outline to treat as its origin",
-                                "$ref": "#/definitions/anchor"
-                            }
-                        },
-                        "required": ["name"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "path"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "segments": {
-                                "description": "Connected segments, each starting where the previous one ended. The path is closed with a straight line",
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/path_segment"
-                                }
-                            }
-                        },
-                        "required": ["segments"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "hull"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "points": {
-                                "description": "Points to wrap, each anchored relative to the previous one",
-                                "type": "array",
-                                "items": {
-                                    "$ref": "#/definitions/anchor"
-                                }
-                            },
-                            "concavity": {
-                                "description": "Hull concavity, lower is more concave",
-                                "$ref": "#/definitions/number",
-                                "default": 50
-                            },
-                            "extend": {
-                                "description": "Wrap the full key rectangles instead of only their centers",
-                                "type": "boolean",
-                                "default": true
-                            }
-                        },
-                        "required": ["points"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "svg"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "paths": {
-                                "$ref": "#/definitions/svg_paths"
-                            },
-                            "accuracy": {
-                                "description": "Accuracy of curve conversion (non-zero)",
-                                "$ref": "#/definitions/number",
-                                "default": 0.0001
-                            },
-                            "flip_horizontally": {
-                                "type": "boolean"
-                            },
-                            "flip_vertically": {
-                                "type": "boolean"
-                            },
-                            "origin": {
-                                "description": "Point of the paths to treat as their origin, before flipping",
-                                "$ref": "#/definitions/xy"
-                            }
-                        },
-                        "required": ["paths"],
-                        "additionalProperties": false
-                    }
-                },
-                {
-                    "if": {"properties": {"what": {"const": "choc_hotswap_socket"}}, "required": ["what"]},
-                    "then": {
-                        "properties": {
-                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
-                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
-                            "paths": {
-                                "description": "Accepted but ignored, as the socket shape is fixed",
-                                "$ref": "#/definitions/svg_paths"
-                            },
-                            "accuracy": {
-                                "description": "Accuracy of curve conversion (non-zero)",
-                                "$ref": "#/definitions/number",
-                                "default": 0.0001
-                            },
-                            "flip_horizontally": {
-                                "type": "boolean"
-                            },
-                            "flip_vertically": {
-                                "type": "boolean"
-                            },
-                            "origin": {
-                                "description": "Point of the paths to treat as their origin, before flipping",
-                                "$ref": "#/definitions/xy"
-                            }
-                        },
-                        "additionalProperties": false
-                    }
-                }
-            ]
-        },
-        "svg_paths": {
-            "description": "Closed SVG path data (the \"d\" attribute), as one string or a non-empty list unioned together",
-            "anyOf": [
-                {
-                    "type": "string",
-                    "minLength": 1
-                },
-                {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1
-                    },
-                    "minItems": 1
-                }
-            ]
-        },
-        "path_segment": {
-            "type": "object",
-            "properties": {
-                "type": {
-                    "description": "Segment type. Point counts include the point inherited from the previous segment: line needs 2+, arc 3, s_curve 2, bezier 3 or 4",
-                    "type": "string",
-                    "enum": ["line", "arc", "s_curve", "bezier"]
-                },
-                "points": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/anchor"
-                    }
-                }
-            },
-            "required": ["type", "points"],
-            "allOf": [
-                {
-                    "if": {"properties": {"type": {"const": "bezier"}}},
-                    "then": {
-                        "properties": {
-                            "type": true,
-                            "points": true,
-                            "accuracy": {
-                                "$ref": "#/definitions/number"
-                            }
-                        },
-                        "additionalProperties": false
-                    },
-                    "else": {
-                        "properties": {
-                            "type": true,
-                            "points": true
-                        },
-                        "additionalProperties": false
-                    }
-                }
-            ]
+            "description": "An outline part. The fields below are handled by the engine for every shape, while any other field belongs to the shape itself (built-in or injected) and is checked when it gets processed"
         },
         "case_part": {
             "anyOf": [
@@ -916,7 +724,14 @@
             },
             "required": ["name"],
             "additionalProperties": false,
-            "if": {"properties": {"what": {"const": "case"}}, "required": ["what"]},
+            "if": {
+                "properties": {
+                    "what": {
+                        "const": "case"
+                    }
+                },
+                "required": ["what"]
+            },
             "then": {
                 "properties": {
                     "extrude": false
@@ -927,15 +742,8 @@
             "type": "object",
             "properties": {
                 "template": {
-                    "description": "PCB template (built-in or injected)",
-                    "anyOf": [
-                        {
-                            "enum": ["kicad5", "kicad8"]
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ],
+                    "description": "Template name, built-in or injected",
+                    "type": "string",
                     "default": "kicad5"
                 },
                 "references": {
@@ -943,7 +751,8 @@
                     "type": "boolean"
                 },
                 "params": {
-                    "description": "Custom parameters passed through to the template"
+                    "description": "Custom parameters passed through to the template",
+                    "type": "object"
                 },
                 "outlines": {
                     "description": "Outlines to draw onto the PCB",
@@ -1001,15 +810,8 @@
             "type": "object",
             "properties": {
                 "what": {
-                    "description": "Footprint type (built-in or injected)",
-                    "anyOf": [
-                        {
-                            "enum": ["alps", "button", "choc", "chocmini", "diode", "jstph", "jumper", "mx", "oled", "omron", "pad", "promicro", "rgb", "rotary", "scrollwheel", "slider", "trrs", "via"]
-                        },
-                        {
-                            "type": "string"
-                        }
-                    ]
+                    "description": "Footprint name, built-in or injected",
+                    "type": "string"
                 },
                 "where": {
                     "description": "Points to place the footprint at (defaults to the origin)",
@@ -1025,456 +827,17 @@
                     "$ref": "#/definitions/anchor"
                 },
                 "params": {
-                    "description": "Footprint parameters. String values are \"{{templated}}\" with point metadata, and \"mirror\" holds overrides for mirrored points",
+                    "description": "Footprint parameters, checked by the footprint itself (built-in or injected). String values are \"{{templated}}\" with point metadata",
                     "type": "object",
                     "properties": {
                         "mirror": {
+                            "description": "Parameter overrides for mirrored points",
                             "type": "object"
                         }
                     }
                 }
             },
             "required": ["what"],
-            "additionalProperties": false,
-            "allOf": [
-                {"if": {"properties": {"what": {"const": "alps"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_alps"}}}},
-                {"if": {"properties": {"what": {"const": "button"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_button"}}}},
-                {"if": {"properties": {"what": {"const": "choc"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_choc"}}}},
-                {"if": {"properties": {"what": {"const": "chocmini"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_chocmini"}}}},
-                {"if": {"properties": {"what": {"const": "diode"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_diode"}}}},
-                {"if": {"properties": {"what": {"const": "jstph"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_jstph"}}}},
-                {"if": {"properties": {"what": {"const": "jumper"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_jumper"}}}},
-                {"if": {"properties": {"what": {"const": "mx"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_mx"}}}},
-                {"if": {"properties": {"what": {"const": "oled"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_oled"}}}},
-                {"if": {"properties": {"what": {"const": "omron"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_omron"}}}},
-                {"if": {"properties": {"what": {"const": "pad"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_pad"}}}},
-                {"if": {"properties": {"what": {"const": "promicro"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_promicro"}}}},
-                {"if": {"properties": {"what": {"const": "rgb"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_rgb"}}}},
-                {"if": {"properties": {"what": {"const": "rotary"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_rotary"}}}},
-                {"if": {"properties": {"what": {"const": "scrollwheel"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_scrollwheel"}}}},
-                {"if": {"properties": {"what": {"const": "slider"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_slider"}}}},
-                {"if": {"properties": {"what": {"const": "trrs"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_trrs"}}}},
-                {"if": {"properties": {"what": {"const": "via"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_params_via"}}}},
-                {
-                    "description": "Nets without a default are required, unless the footprint is never placed",
-                    "if": {"properties": {"where": {"const": false}}, "required": ["where"]},
-                    "else": {
-                        "allOf": [
-                            {"if": {"properties": {"what": {"const": "alps"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_alps"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "button"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_button"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "choc"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_choc"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "chocmini"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_chocmini"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "diode"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_diode"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "jstph"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_jstph"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "jumper"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_jumper"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "mx"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_mx"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "oled"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_oled"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "omron"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_omron"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "pad"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_pad"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "rgb"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_rgb"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "rotary"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_rotary"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "scrollwheel"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_scrollwheel"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "slider"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_slider"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "trrs"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_trrs"}}, "required": ["params"]}},
-                            {"if": {"properties": {"what": {"const": "via"}}}, "then": {"properties": {"params": {"$ref": "#/definitions/footprint_nets_via"}}, "required": ["params"]}}
-                        ]
-                    }
-                }
-            ]
-        },
-        "footprint_param_string": {
-            "description": "String footprint parameter",
-            "type": ["string", "number"]
-        },
-        "footprint_param_number": {
-            "description": "Numeric footprint parameter",
-            "$ref": "#/definitions/number"
-        },
-        "footprint_param_boolean": {
-            "description": "Boolean footprint parameter, a number (used for its truthiness), or a string (template) that resolves to \"true\" or 1",
-            "type": ["boolean", "string", "number"]
-        },
-        "footprint_param_net": {
-            "description": "Net name",
-            "type": "string"
-        },
-        "footprint_nets_alps": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_button": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_choc": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_chocmini": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_diode": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_jstph": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["pos"]}, {"properties": {"mirror": {"type": "object", "required": ["pos"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["neg"]}, {"properties": {"mirror": {"type": "object", "required": ["neg"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_jumper": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_mx": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_oled": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["SDA"]}, {"properties": {"mirror": {"type": "object", "required": ["SDA"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["SCL"]}, {"properties": {"mirror": {"type": "object", "required": ["SCL"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_omron": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_pad": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["net"]}, {"properties": {"mirror": {"type": "object", "required": ["net"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_rgb": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["din"]}, {"properties": {"mirror": {"type": "object", "required": ["din"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["dout"]}, {"properties": {"mirror": {"type": "object", "required": ["dout"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_rotary": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_scrollwheel": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["D"]}, {"properties": {"mirror": {"type": "object", "required": ["D"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_slider": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["from"]}, {"properties": {"mirror": {"type": "object", "required": ["from"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["to"]}, {"properties": {"mirror": {"type": "object", "required": ["to"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_trrs": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["A"]}, {"properties": {"mirror": {"type": "object", "required": ["A"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["B"]}, {"properties": {"mirror": {"type": "object", "required": ["B"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["C"]}, {"properties": {"mirror": {"type": "object", "required": ["C"]}}, "required": ["mirror"]}]},
-                {"anyOf": [{"required": ["D"]}, {"properties": {"mirror": {"type": "object", "required": ["D"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_nets_via": {
-            "description": "Nets without a default, set directly or in mirror overrides (which only apply to mirrored points)",
-            "type": "object",
-            "allOf": [
-                {"anyOf": [{"required": ["net"]}, {"properties": {"mirror": {"type": "object", "required": ["net"]}}, "required": ["mirror"]}]}
-            ]
-        },
-        "footprint_params_alps": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_alps"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_button": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_button"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_choc": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "hotswap": {"$ref": "#/definitions/footprint_param_boolean"},
-                "reverse": {"$ref": "#/definitions/footprint_param_boolean"},
-                "keycaps": {"$ref": "#/definitions/footprint_param_boolean"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_choc"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_chocmini": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "reverse": {"$ref": "#/definitions/footprint_param_boolean"},
-                "keycaps": {"$ref": "#/definitions/footprint_param_boolean"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_chocmini"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_diode": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_diode"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_jstph": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "pos": {"$ref": "#/definitions/footprint_param_net"},
-                "neg": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_jstph"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_jumper": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_jumper"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_mx": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "hotswap": {"$ref": "#/definitions/footprint_param_boolean"},
-                "reverse": {"$ref": "#/definitions/footprint_param_boolean"},
-                "keycaps": {"$ref": "#/definitions/footprint_param_boolean"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_mx"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_oled": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "VCC": {"$ref": "#/definitions/footprint_param_net"},
-                "GND": {"$ref": "#/definitions/footprint_param_net"},
-                "SDA": {"$ref": "#/definitions/footprint_param_net"},
-                "SCL": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_oled"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_omron": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_omron"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_pad": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "width": {"$ref": "#/definitions/footprint_param_number"},
-                "height": {"$ref": "#/definitions/footprint_param_number"},
-                "front": {"$ref": "#/definitions/footprint_param_boolean"},
-                "back": {"$ref": "#/definitions/footprint_param_boolean"},
-                "text": {"$ref": "#/definitions/footprint_param_string"},
-                "align": {"$ref": "#/definitions/footprint_param_string"},
-                "mirrored": {"$ref": "#/definitions/footprint_param_boolean"},
-                "net": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_pad"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_promicro": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "orientation": {"$ref": "#/definitions/footprint_param_string"},
-                "RAW": {"$ref": "#/definitions/footprint_param_net"},
-                "GND": {"$ref": "#/definitions/footprint_param_net"},
-                "RST": {"$ref": "#/definitions/footprint_param_net"},
-                "VCC": {"$ref": "#/definitions/footprint_param_net"},
-                "P21": {"$ref": "#/definitions/footprint_param_net"},
-                "P20": {"$ref": "#/definitions/footprint_param_net"},
-                "P19": {"$ref": "#/definitions/footprint_param_net"},
-                "P18": {"$ref": "#/definitions/footprint_param_net"},
-                "P15": {"$ref": "#/definitions/footprint_param_net"},
-                "P14": {"$ref": "#/definitions/footprint_param_net"},
-                "P16": {"$ref": "#/definitions/footprint_param_net"},
-                "P10": {"$ref": "#/definitions/footprint_param_net"},
-                "P1": {"$ref": "#/definitions/footprint_param_net"},
-                "P0": {"$ref": "#/definitions/footprint_param_net"},
-                "P2": {"$ref": "#/definitions/footprint_param_net"},
-                "P3": {"$ref": "#/definitions/footprint_param_net"},
-                "P4": {"$ref": "#/definitions/footprint_param_net"},
-                "P5": {"$ref": "#/definitions/footprint_param_net"},
-                "P6": {"$ref": "#/definitions/footprint_param_net"},
-                "P7": {"$ref": "#/definitions/footprint_param_net"},
-                "P8": {"$ref": "#/definitions/footprint_param_net"},
-                "P9": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_promicro"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_rgb": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "din": {"$ref": "#/definitions/footprint_param_net"},
-                "dout": {"$ref": "#/definitions/footprint_param_net"},
-                "VCC": {"$ref": "#/definitions/footprint_param_net"},
-                "GND": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_rgb"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_rotary": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "A": {"$ref": "#/definitions/footprint_param_net"},
-                "B": {"$ref": "#/definitions/footprint_param_net"},
-                "C": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_rotary"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_scrollwheel": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "reverse": {"$ref": "#/definitions/footprint_param_boolean"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "A": {"$ref": "#/definitions/footprint_param_net"},
-                "B": {"$ref": "#/definitions/footprint_param_net"},
-                "C": {"$ref": "#/definitions/footprint_param_net"},
-                "D": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_scrollwheel"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_slider": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "side": {"$ref": "#/definitions/footprint_param_string"},
-                "from": {"$ref": "#/definitions/footprint_param_net"},
-                "to": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_slider"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_trrs": {
-            "type": "object",
-            "properties": {
-                "designator": {"$ref": "#/definitions/footprint_param_string"},
-                "reverse": {"$ref": "#/definitions/footprint_param_boolean"},
-                "symmetric": {"$ref": "#/definitions/footprint_param_boolean"},
-                "A": {"$ref": "#/definitions/footprint_param_net"},
-                "B": {"$ref": "#/definitions/footprint_param_net"},
-                "C": {"$ref": "#/definitions/footprint_param_net"},
-                "D": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_trrs"}], "properties": {"mirror": false}}
-            },
-            "additionalProperties": false
-        },
-        "footprint_params_via": {
-            "type": "object",
-            "properties": {
-                "net": {"$ref": "#/definitions/footprint_param_net"},
-                "mirror": {"type": "object", "allOf": [{"$ref": "#/definitions/footprint_params_via"}], "properties": {"mirror": false}}
-            },
             "additionalProperties": false
         }
     }
