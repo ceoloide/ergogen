@@ -751,8 +751,7 @@
                     "type": "boolean"
                 },
                 "params": {
-                    "description": "Custom parameters passed through to the template",
-                    "type": "object"
+                    "description": "Any custom value, passed through to the template unchanged"
                 },
                 "outlines": {
                     "description": "Outlines to draw onto the PCB",

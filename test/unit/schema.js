@@ -327,7 +327,8 @@ describe('Schema', function() {
     })
 
     it('accepts any shape, footprint and template, built-in or injected', async function() {
-        // names can be new or replace a built-in, and their fields and params are their own
+        // names can be new or replace an injectable built-in (the core shapes like "rectangle" always win
+        // the lookup), and either way their fields and params are their own
         const plugins = {
             points: {zones: {matrix: null}, mirror: 30},
             outlines: {
@@ -344,7 +345,8 @@ describe('Schema', function() {
                         {what: 'my_footprint', params: {label: 'new'}},
                         {what: 'mx', where: true, asym: 'both', params: {label: 'source', net: 'GND', mirror: {label: 'clone'}}}
                     ]
-                }
+                },
+                other: {template: 'my_template', params: ['any', 1]}
             }
         }
         violations(plugins).should.deep.equal([])
@@ -368,14 +370,15 @@ describe('Schema', function() {
         }
         const template = {
             convert_outline: () => '',
-            body: params => `custom ${params.custom.secret}\n${params.footprints.join('\n')}`
+            body: params => `custom ${JSON.stringify(params.custom)}\n${params.footprints.join('\n')}`
         }
         const injections = [
             ['outline', 'my_shape', square],
             ['outline', 'choc_hotswap_socket', square],
             ['footprint', 'my_footprint', labeled],
             ['footprint', 'mx', labeled],
-            ['template', 'kicad8', template]
+            ['template', 'kicad8', template],
+            ['template', 'my_template', template]
         ]
         const saved = injections.map(([type, name]) => [type, name, registries[type][name]])
         try {
@@ -383,16 +386,34 @@ describe('Schema', function() {
             const results = await ergogen.process(u.deepcopy(plugins))
             Object.keys(results.outlines).should.deep.equal(['shapes'])
             const pcb = results.pcbs.main
-            pcb.should.include('custom 42')
+            pcb.should.include('custom {"secret":42}')
             for (const label of ['new', 'source', 'clone']) pcb.should.include(`"${label}"`)
+            results.pcbs.other.should.include('custom ["any",1]')
         } finally {
             for (const [type, name, value] of saved) {
                 if (value === undefined) delete registries[type][name]
                 else registries[type][name] = value
             }
         }
-        // and the registries are back to their built-ins
-        ;(await engine_error(plugins)).should.include('should be one of')
+
+        // the registries are back to their previous entries, without the new names
+        for (const [type, name, value] of saved) {
+            if (value === undefined) registries[type].should.not.have.property(name)
+            else registries[type][name].should.equal(value)
+        }
+    })
+
+    it('passes pcb params through to the template unchanged', async function() {
+        // unlike footprint params, which the engine reads as an object, pcb params are only handed to the template
+        const pcb = params => ({points: {zones: {matrix: null}}, pcbs: {main: {params}}})
+        for (const params of [{secret: 42}, ['any', 1], 'text', 5, true, null]) {
+            violations(pcb(params)).should.deep.equal([])
+        }
+        for (const params of ['text', null]) {
+            ;(await engine_error(pcb(params))).should.equal('')
+        }
+        violations({points: {zones: {matrix: null}}, pcbs: {main: {footprints: [{what: 'via', params: 'GND'}]}}})
+            .should.include('/pcbs/main/footprints/0/params must be object')
     })
 
     it('matches the engine defaults and aliases', function() {
