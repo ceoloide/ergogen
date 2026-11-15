@@ -119,7 +119,7 @@ describe('Schema', function() {
                         what: 'svg', where: 'thumb', paths: ['M 0 0 L 0 -2.5 L -2.5 -2.5 Z'],
                         accuracy: 0.001, flip_vertically: true, origin: [1, 1], operation: 'stack'
                     },
-                    socket: {what: 'choc_hotswap_socket', where: 'thumb', origin: [0, 'step / 10'], flip_horizontally: true, operation: 'stack'}
+                    socket: {what: 'choc_hotswap_socket', where: 'thumb', origin: [0, 1], flip_horizontally: true, operation: 'stack'}
                 },
                 grown: ['keys', {name: 'keys', expand: '2]'}, {name: 'keys', expand: 1, joints: 'round'}, '-shapes']
             },
@@ -260,6 +260,24 @@ describe('Schema', function() {
             }
         }
         violations(raw).should.not.deep.equal([])
+        violations(canonical(raw)).should.deep.equal([])
+        ;(await engine_error(raw)).should.equal('')
+    })
+
+    it('accepts every mirror override form', async function() {
+        // as in the engine's own interface test: overrides can be inherited, cleared or relabel,
+        // and only their first level is checked for reserved names
+        const raw = {
+            'points.mirror': 100,
+            'points.key.mirror.width': 30,
+            'points.zones.matrix.columns.c': {},
+            'points.zones.matrix.rows': {
+                inherit: {mirror: null},
+                cleared: {mirror: false},
+                unset: {mirror: '$unset'},
+                relabel: {mirror: {row: 'P1', mirror: {key: 'inner'}}}
+            }
+        }
         violations(canonical(raw)).should.deep.equal([])
         ;(await engine_error(raw)).should.equal('')
     })

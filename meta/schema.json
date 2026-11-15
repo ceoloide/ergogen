@@ -387,6 +387,19 @@
                     "$ref": "#/definitions/key_fields"
                 }
             ],
+            "properties": {
+                "mirror": {
+                    "description": "Overrides for the mirrored copy of the key (false or \"$unset\" clears inherited overrides)",
+                    "anyOf": [
+                        {
+                            "$ref": "#/definitions/key_mirror"
+                        },
+                        {
+                            "enum": [false, "$unset"]
+                        }
+                    ]
+                }
+            },
             "propertyNames": {
                 "description": "Higher-level structure and engine-managed point metadata are reserved",
                 "not": {
@@ -395,7 +408,7 @@
             }
         },
         "key_mirror": {
-            "description": "Overrides applied to the mirrored copy of the key, which can relabel its zone, col and row",
+            "description": "Overrides applied to the mirrored copy of the key, which can relabel its zone, col and row. A nested mirror is plain metadata",
             "type": ["object", "null"],
             "allOf": [
                 {
@@ -481,9 +494,6 @@
                 "tags": {
                     "description": "Tags for filters (a string, a list, or a map whose keys are the tags)",
                     "type": ["string", "array", "object", "null"]
-                },
-                "mirror": {
-                    "$ref": "#/definitions/key_mirror"
                 }
             }
         },
