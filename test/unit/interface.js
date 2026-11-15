@@ -86,6 +86,36 @@ describe('Interface', function() {
         ])
     })
     
+    it('nested inheritance', async function() {
+        // the zone's key extends its own template, unsetting the padding,
+        // instead of keeping the key fields the zone template already set
+        const result = await ergogen.process({
+            'shared.wide': {spread: 30, padding: 25, tag: 'wide'},
+            'shared.zone': {
+                key: {spread: 19, tag: 'zone'},
+                columns: {a: {}, b: {}},
+                rows: {bottom: {}, top: {}}
+            },
+            'points.zones.matrix': {
+                $extends: 'shared.zone',
+                key: {$extends: 'shared.wide', padding: '$unset'}
+            }
+        }, {debug: true})
+        result.canonical.points.zones.matrix.key.should.deep.equal({spread: 30, tag: 'wide'})
+        const layout = Object.entries(result.points).map(([name, point]) => [name, point.x, point.y])
+        layout.should.deep.equal([
+            ['matrix_a_bottom', 0, 0],
+            ['matrix_a_top', 0, 19],
+            ['matrix_b_bottom', 30, 0],
+            ['matrix_b_top', 30, 19]
+        ])
+        for (const point of Object.values(result.points)) {
+            point.meta.spread.should.equal(30)
+            point.meta.padding.should.equal(19)
+            point.meta.tag.should.equal('wide')
+        }
+    })
+
     it('reserved keys', async function() {
         const reserved = (config, field, key) => ergogen.process(config).should.be.rejectedWith(
             `Reserved key "${key}" within field "${field}"`
