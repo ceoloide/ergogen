@@ -8,7 +8,7 @@ const a = require('./assert')
 //  - width/height must be positive, either unitless or in mm
 //  - a viewBox must start at 0 0, and must match width/height (if present) up to `tolerance`
 //  - comments, foreign (e.g. inkscape) elements and unreferenced defs/clipPath/etc. are ignored
-//  - other visible geometry, transforms, clipping, masking and nested viewports are rejected
+//  - other visible geometry, transforms, clipping, masking, markers, filters and nested viewports are rejected
 //  - path data has to follow the svg path grammar, and is passed on with its tokens separated
 //  - css (style elements, display, visibility, stroke, fill) never selects or expands paths
 
@@ -33,9 +33,24 @@ const doctype_regex = /<!DOCTYPE[^<>\[\]]*>/y
 const number_regex = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
 const length_regex = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(mm)?\s*$/
 
-const entities = {lt: '<', gt: '>', amp: '&', quot: '"', apos: '\''}
-
+// maps keyed by svg input never inherit (e.g. "constructor") from Object.prototype
+const own = (fields={}) => Object.assign(Object.create(null), fields)
 const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
+
+const entities = own({lt: '<', gt: '>', amp: '&', quot: '"', apos: '\''})
+
+// css properties that transform an element
+const transforms = ['transform', 'rotate', 'scale', 'translate']
+// references to definitions that would change the imported geometry, and what to do about them
+const references = {
+    'clip-path': 'clipping and masking are not supported! Apply them to the paths before exporting.',
+    'mask': 'clipping and masking are not supported! Apply them to the paths before exporting.',
+    'marker': 'markers are not supported! Convert the markers to paths before exporting.',
+    'marker-start': 'markers are not supported! Convert the markers to paths before exporting.',
+    'marker-mid': 'markers are not supported! Convert the markers to paths before exporting.',
+    'marker-end': 'markers are not supported! Convert the markers to paths before exporting.',
+    'filter': 'filters are not supported! Remove them before exporting.',
+}
 
 // path data commands, and the number of arguments in each of their segments
 const path_commands = {m: 2, l: 2, h: 1, v: 1, c: 6, s: 4, q: 4, t: 2, a: 7, z: 0}
@@ -106,7 +121,7 @@ const path_data = exports.path_data = (data, label) => {
 const decode = (raw, name) => raw.replace(/&(?:#x([0-9a-fA-F]+)|#([0-9]+)|([A-Za-z]+))?;?/g, (match, hex, dec, entity) => {
     a.assert(match.length > 1 && match.endsWith(';'), `SVG outline "${name}" contains a malformed entity "${match}"!`)
     if (entity !== undefined) {
-        a.assert(entities[entity] !== undefined, `SVG outline "${name}" contains an unknown entity "${match}"!`)
+        a.assert(has(entities, entity), `SVG outline "${name}" contains an unknown entity "${match}"!`)
         return entities[entity]
     }
     const code = hex !== undefined ? parseInt(hex, 16) : parseInt(dec, 10)
@@ -115,9 +130,9 @@ const decode = (raw, name) => raw.replace(/&(?:#x([0-9a-fA-F]+)|#([0-9]+)|([A-Za
 })
 
 const parse_attributes = (raw, name) => {
-    const attributes = {}
+    const attributes = own()
     for (const [, key, double, single] of raw.matchAll(attribute_regex)) {
-        a.assert(attributes[key] === undefined, `SVG outline "${name}" repeats the attribute "${key}" on an element!`)
+        a.assert(!has(attributes, key), `SVG outline "${name}" repeats the attribute "${key}" on an element!`)
         attributes[key] = decode(double !== undefined ? double : single, name)
     }
     return attributes
@@ -125,7 +140,7 @@ const parse_attributes = (raw, name) => {
 
 // css properties set through an inline style attribute
 const style_properties = style => {
-    const properties = {}
+    const properties = own()
     for (const declaration of (style || '').split(';')) {
         const colon = declaration.indexOf(':')
         if (colon == -1) continue
@@ -177,14 +192,14 @@ const namespace_of = (qname, namespaces, name) => {
     const colon = qname.indexOf(':')
     if (colon == -1) return namespaces['']
     const prefix = qname.slice(0, colon)
-    a.assert(namespaces[prefix] !== undefined, `SVG outline "${name}" uses the undeclared namespace prefix "${prefix}"!`)
+    a.assert(has(namespaces, prefix), `SVG outline "${name}" uses the undeclared namespace prefix "${prefix}"!`)
     return namespaces[prefix]
 }
 
 exports.extract = (text, name) => {
 
     a.assert(typeof text == 'string', `SVG outline "${name}" should be text!`)
-    if (text.startsWith('﻿')) text = text.slice(1)
+    if (text.startsWith('\uFEFF')) text = text.slice(1)
 
     const paths = []
     const stack = []
@@ -194,7 +209,7 @@ exports.extract = (text, name) => {
     // the geometry-relevant state of an element, given its parent's state
     const visit = (qname, attributes) => {
         const parent = stack[stack.length - 1]
-        const namespaces = {...(parent ? parent.namespaces : {})}
+        const namespaces = own(parent ? parent.namespaces : {})
         for (const [key, val] of Object.entries(attributes)) {
             if (key == 'xmlns') namespaces[''] = val
             else if (key.startsWith('xmlns:')) namespaces[key.slice('xmlns:'.length)] = val
@@ -225,14 +240,12 @@ exports.extract = (text, name) => {
             'Flatten the drawing into a single <svg> before exporting.')
         a.assert(local == 'svg' || local == 'path' || containers.includes(local), `SVG outline "${name}" contains an unsupported element <${qname}>!`)
 
-        // references to definitions that would change the imported geometry
         const style = style_properties(attributes.style)
-        for (const property of ['clip-path', 'mask']) {
-            a.assert(!active(attributes[property]) && !active(style[property]), `SVG outline "${name}" uses "${property}" on <${qname}>, ` +
-                'clipping and masking are not supported! Apply them to the paths before exporting.')
+        for (const [property, reason] of Object.entries(references)) {
+            a.assert(!active(attributes[property]) && !active(style[property]), `SVG outline "${name}" uses "${property}" on <${qname}>, ${reason}`)
         }
         frame.transformed = parent && parent.transformed
-        if (active(attributes.transform) || active(style.transform)) frame.transformed = qname
+        if (active(attributes.transform) || transforms.some(property => active(style[property]))) frame.transformed = qname
 
         if (local == 'path') {
             a.assert(frame.transformed === undefined, `SVG outline "${name}" has a transform on <${frame.transformed}> affecting path ${paths.length}, ` +

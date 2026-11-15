@@ -69,13 +69,17 @@ describe('SVG', function() {
             `<g><path inkscape:original-d="${far_square}" d="${square}"/></g>`,
             `${ns} xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"`), unit_square],
         'svg prefix': [`<s:svg xmlns:s="http://www.w3.org/2000/svg"><s:g><s:path d="${square}"/></s:g></s:svg>`, unit_square],
-        'prolog and descriptions': [`﻿<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n` +
+        'prolog and descriptions': [`\uFEFF<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n` +
             doc(`<title>t</title><desc>d</desc><metadata><rect/></metadata><style><![CDATA[path { fill: red }]]></style>` +
             `<path style="fill:none;;stroke:red" transform="" clip-path="none" d="${square}"/>`) + '\n', unit_square],
         'millimetre dimensions without viewBox do not rescale': [doc(`<path d="${square}"/>`, `${ns} width="20mm" height="5"`), unit_square],
         'matching viewBox': [doc(`<path d="${square}"/>`, `${ns} x="0" y="0" width="14.2mm" height=" 6.7 " viewBox="0,0,14.2,6.7"`), unit_square],
         'viewBox roundoff': [doc(`<path d="${square}"/>`, `${ns} width="37.795mm" viewBox="0 0 37.7953 10"`), unit_square],
         'no paths': [doc('<g/>'), 'must have at least one path'],
+        'inherited property names': [`<svg ${ns} xmlns:constructor="urn:other"><constructor:g/>` +
+            `<path constructor="x" __proto__="y" style="constructor: x; __proto__: y" d="${square}"/></svg>`, unit_square],
+        'unreferenced marker': [doc(`<defs><marker id="m"><circle r="10"/></marker></defs>` +
+            `<g style="marker: none"><path marker-end="none" filter="none" style="rotate: none; scale: none" d="${square}"/></g>`), unit_square],
         'compact path data': [doc('<path d="M10 0h-10a5,5 0 0110,0z"/>'), {low: [0, 0], high: [10, 5], chains: 1}],
     }
 
@@ -125,6 +129,17 @@ describe('SVG', function() {
         'infinite viewBox': [doc(`<path d="${square}"/>`, `${ns} viewBox="0 0 1e999 10"`), 'four finite numbers'],
         'empty viewBox': [doc(`<path d="${square}"/>`, `${ns} viewBox="0 0 0 10"`), 'positive width and height'],
         'misplaced doctype': [doc('') + '<!DOCTYPE svg>', 'misplaced DOCTYPE'],
+        'inherited entity': [doc(`<path id="&constructor;" d="${square}"/>`), 'unknown entity "&constructor;"'],
+        'inherited prefix': [doc('<constructor:g/>'), 'undeclared namespace prefix "constructor"'],
+        'marker reference': [doc(`<defs><marker id="m"><circle r="10"/></marker></defs><path marker-end="url(#m)" d="M0 0L1 0L1 1Z"/>`),
+            'uses "marker-end" on <path>, markers are not supported! Convert the markers to paths'],
+        'inherited css marker': [doc(`<g style="marker-start: url(#m)"><path d="${square}"/></g>`), 'uses "marker-start" on <g>'],
+        'marker shorthand': [doc(`<path marker="url(#m)" d="${square}"/>`), 'uses "marker" on <path>'],
+        'mid markers': [doc(`<path style="marker-mid:url(#m)" d="${square}"/>`), 'uses "marker-mid" on <path>'],
+        'filter': [doc(`<g filter="url(#f)"><path d="${square}"/></g>`), 'uses "filter" on <g>, filters are not supported!'],
+        'css rotate': [doc(`<g style="rotate: 45deg"><path d="${square}"/></g>`), 'transform on <g> affecting path 0'],
+        'css scale': [doc(`<path style="scale: 2" d="${square}"/>`), 'transform on <path> affecting path 0'],
+        'css translate': [doc(`<path d="${square}"/><path style="translate: 5px" d="${square}"/>`), 'transform on <path> affecting path 1'],
         'truncated path data': [doc(`<path d="${square}"/><path d="M 0 0 C 1 1 2 2"/>`), 'Path 1 for SVG outline'],
         'empty path data': [doc('<path d=""/>'), 'Path 0 for SVG outline'],
     }
