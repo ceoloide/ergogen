@@ -114,38 +114,104 @@ describe('Verify', function() {
         input.meta.created.should.equal(date)
     })
 
-    it('keys reaching the object prototype', function() {
-        const probe = () => Object.prototype.schema_probe
-        try {
-            const inputs = [
-                ['points.zones.matrix:\n__proto__.schema_probe: 1\n', 'unsafe_key', '/__proto__.schema_probe',
-                    'Key "__proto__.schema_probe" within the config root would reach the object prototype!'],
-                [{points: {zones: {matrix: null}, key: {'constructor.prototype.schema_probe': 1}}}, 'unsafe_key',
-                    '/points/key/constructor.prototype.schema_probe',
-                    'Key "constructor.prototype.schema_probe" within field "points.key" would reach the object prototype!'],
-                ['{"points": {"zones": {"matrix": null}}, "__proto__": {"schema_probe": 1}}', 'unsafe_key', '/__proto__'],
-                [{points: {zones: {matrix: {$extends: 'a.__proto__.schema_probe.x'}}}, a: {}}, 'unsafe_reference',
-                    '/points/zones/matrix/$extends',
-                    'Inheritance target "a.__proto__.schema_probe.x" in field "points.zones.matrix.$extends" would reach the object prototype!'],
-                [{points: {zones: {matrix: {$extends: ['a', 'constructor.prototype']}}}, a: {}}, 'unsafe_reference',
-                    '/points/zones/matrix/$extends']
-            ]
-            for (const [raw, code, pointer, message] of inputs) {
-                const result = ergogen.verify(raw)
-                result.checks.should.deep.equal(['parse'])
-                result.diagnostics.length.should.equal(1)
-                result.diagnostics[0].should.include({code, phase: 'parse', pointer})
-                if (message) result.diagnostics[0].message.should.equal(message)
-                should.not.exist(probe())
+    // everything a dotted path could reach outside of the config, compared by descriptor so that no getter runs
+    const prototypes = {Object, Array, String, Number, Boolean, Function}
+    const builtins = () => {
+        const snapshot = {}
+        for (const [name, type] of Object.entries(prototypes)) {
+            for (const key of Object.getOwnPropertyNames(type.prototype)) {
+                const value = Object.getOwnPropertyDescriptor(type.prototype, key).value
+                snapshot[`${name}.${key}`] = typeof value == 'function' ? Object.keys(value) : typeof value
             }
-            // those names can still end a key, as plain custom metadata
-            ergogen.verify({points: {zones: {matrix: null}, key: {constructor: 1, 'meta.prototype': 2}}}).valid.should.be.true
-            should.not.exist(probe())
-            // and later calls are unaffected
-            ergogen.verify(fixture('minimal.yml')).valid.should.be.true
-        } finally {
-            delete Object.prototype.schema_probe
         }
+        return snapshot
+    }
+    const cleanup = () => {
+        for (const type of Object.values(prototypes)) {
+            for (const key of Object.getOwnPropertyNames(type.prototype)) {
+                const value = Object.getOwnPropertyDescriptor(type.prototype, key).value
+                if (['round4_probe', '$skip'].includes(key)) delete type.prototype[key]
+                else if (typeof value == 'function') delete value.round4_probe
+            }
+        }
+    }
+
+    it('keys and references leading outside the config', async function() {
+        // whatever a dotted path would reach through inherited values, like the object prototype or an object,
+        // array, string or number method, is reported before the engine could follow it
+        const outside = [
+            ['points.zones.matrix:\n__proto__.round4_probe: 1\n', 'unsafe_key', 'unnest', '/__proto__.round4_probe',
+                'Key "__proto__.round4_probe" within the config root would reach "__proto__", which isn\'t part of the config!'],
+            [{'points.zones.matrix': null, 'toString.round4_probe': 1}, 'unsafe_key', 'unnest', '/toString.round4_probe'],
+            [{'points.zones.matrix': null, 'toString.call': 1}, 'unsafe_key', 'unnest', '/toString.call'],
+            [{'points.zones.matrix': null, list: [1], 'list.push.round4_probe': 1}, 'unsafe_key', 'unnest', '/list.push.round4_probe'],
+            [{'points.zones.matrix': null, list: [1], 'list.foo.toString.round4_probe': 1}, 'unsafe_key', 'unnest', '/list.foo.toString.round4_probe'],
+            [{'points.zones.matrix': null, s: 'abc', 's.trim.round4_probe': 1}, 'unsafe_key', 'unnest', '/s.trim.round4_probe'],
+            [{'points.zones.matrix': null, s: 'abc', 's.0.trim.round4_probe': 1}, 'unsafe_key', 'unnest', '/s.0.trim.round4_probe'],
+            [{'points.zones.matrix': null, n: 5, 'n.toFixed.round4_probe': 1}, 'unsafe_key', 'unnest', '/n.toFixed.round4_probe'],
+            [{points: {zones: {matrix: null}, key: {'constructor.prototype.round4_probe': 1}}}, 'unsafe_key', 'unnest',
+                '/points/key/constructor.prototype.round4_probe',
+                'Key "constructor.prototype.round4_probe" within field "points.key" would reach "constructor", which isn\'t part of the config!'],
+            // a dotted key can only extend an own field defined before it
+            [{points: {zones: {matrix: null}, key: {'constructor.y': 2, constructor: {x: 1}}}}, 'unsafe_key', 'unnest', '/points/key/constructor.y'],
+            // setting "__proto__" would replace a prototype instead
+            ['{"points": {"zones": {"matrix": null}}, "__proto__": {"round4_probe": 1}}', 'unsafe_key', 'unnest', '/__proto__'],
+            [{'points.zones.matrix': null, 'x.__proto__': {round4_probe: 1}}, 'unsafe_key', 'unnest', '/x.__proto__'],
+            // inheritance targets are checked once unnesting has settled them, wherever they came from
+            [{'points.zones.matrix': null, 'x.$extends': '__proto__.round4_probe.deep'}, 'unsafe_reference', 'inherit', '/x/$extends',
+                'Inheritance target "__proto__.round4_probe.deep" in field "x.$extends" would reach "__proto__", which isn\'t part of the config!'],
+            ['a: {}\npoints.zones.matrix.$extends: a.__proto__.$skip.x\n', 'unsafe_reference', 'inherit', '/points/zones/matrix/$extends'],
+            [{points: {zones: {matrix: null}}, a: {}, x: {$extends: ['a']}, 'x.$extends.0': '__proto__.round4_probe.deep'},
+                'unsafe_reference', 'inherit', '/x/$extends/0'],
+            [{points: {zones: {matrix: {$extends: 'toString.round4_probe.x'}}}}, 'unsafe_reference', 'inherit', '/points/zones/matrix/$extends'],
+            [{points: {zones: {matrix: {$extends: ['a', 'list.push']}}}, a: {}, list: [1]}, 'unsafe_reference', 'inherit',
+                '/points/zones/matrix/$extends/1']
+        ]
+        const before = builtins()
+        try {
+            for (const [raw, code, stage, pointer, message] of outside) {
+                const result = ergogen.verify(raw)
+                result.checks.should.deep.equal(['parse', 'preprocess'])
+                result.diagnostics.length.should.equal(1)
+                result.diagnostics[0].should.include({code, phase: 'preprocess', stage, pointer})
+                if (message) result.diagnostics[0].message.should.equal(message)
+                builtins().should.deep.equal(before)
+            }
+            // and later calls still work as before
+            ergogen.verify(fixture('minimal.yml')).valid.should.be.true
+            Object.keys((await ergogen.process(fixture('minimal.yml'))).points).should.deep.equal(['matrix_col_row'])
+        } finally {
+            cleanup()
+        }
+    })
+
+    it('own fields with builtin names', async function() {
+        // fields the config owns can have any name, as long as "__proto__" isn't one of them
+        const config = {points: {zones: {matrix: null}, key: {
+            constructor: {x: 1}, 'constructor.y': 2, toString: 3, 'meta.prototype': 4, list: [1, 2], 'list.0': 9
+        }}}
+        const result = ergogen.verify(u.deepcopy(config))
+        result.valid.should.be.true
+        result.canonical.points.key.should.deep.equal({constructor: {x: 1, y: 2}, toString: 3, meta: {prototype: 4}, list: [9, 2]})
+        result.canonical.should.deep.equal((await ergogen.process(u.deepcopy(config), {debug: true})).canonical)
+    })
+
+    it('deeply nested inputs', function() {
+        // nesting, including through dotted keys, is bounded instead of exhausting the stack
+        const nest = depth => {
+            const root = {}
+            let level = root
+            for (let i = 0; i < depth; i++) level = level.a = {}
+            return root
+        }
+        ergogen.verify({'points.zones.matrix': null, deep: nest(999)}).valid.should.be.true
+        const deep = ergogen.verify({'points.zones.matrix': null, deep: nest(20000)})
+        deep.checks.should.deep.equal(['parse'])
+        deep.diagnostics.length.should.equal(1)
+        deep.diagnostics[0].should.include({code: 'too_deep', phase: 'parse'})
+        deep.diagnostics[0].path.length.should.equal(1001)
+        const dotted = ergogen.verify({'points.zones.matrix': null, [Array(1001).fill('a').join('.')]: 1}).diagnostics[0]
+        dotted.should.include({code: 'too_deep', message: `Value of field "${Array(1001).fill('a').join('.')}" is nested deeper than 1000 levels!`})
     })
 
     it('preprocessing errors', function() {
@@ -153,7 +219,11 @@ describe('Verify', function() {
         const failing = [
             [{points: {zones: {matrix: {$extends: 'nowhere'}}}}, 'inherit', 'does not name a valid inheritance target'],
             [{points: {zones: {matrix: {$params: ['a'], $args: ['b', 'c']}}}}, 'parameterize', 'don\'t match'],
-            [{points: {zones: {matrix: null}}, units: {a: '$concat("x"'}}, 'concat', 'missing closing parenthesis']
+            [{points: {zones: {matrix: null}}, units: {a: '$concat("x"'}}, 'concat', 'missing closing parenthesis'],
+            // dead ends within strings, or paths that aren't strings, are left to the engine, as they reach nothing
+            [{'points.zones.matrix': null, s: 'abc', 's.missing.x': 1}, 'unnest', 'Cannot set properties of undefined'],
+            [{points: {zones: {matrix: {$extends: 's.missing'}}}, s: 'abc'}, 'inherit', 'does not name a valid inheritance target'],
+            [{points: {zones: {matrix: {$extends: 5}}}}, 'inherit', 'is not a function']
         ]
         for (const [raw, stage, snippet] of failing) {
             const result = ergogen.verify(raw)
@@ -281,6 +351,16 @@ describe('Verify', function() {
         messages.should.include('Field "points.zones.matrix.anchor" should be of type string or array or object!')
         messages.should.include('Field "points.zones.matrix.key.origin" should have at most 2 items!')
         messages.should.include('Field "points.zones.matrix.columns.one.rows.top" should be one of ["$unset"], or of type object or null!')
+        // problems with the whole config name its root
+        ergogen.verify({$extends: '$extends'}).diagnostics.should.deep.equal([{
+            code: 'invalid_type',
+            phase: 'structure',
+            path: [],
+            pointer: '',
+            message: 'The config root should be of type object!',
+            expected: {type: ['object']},
+            actual: '$extends'
+        }])
         // a field name with special characters keeps its exact path
         const odd = ergogen.verify({points: {zones: {'a/b~c': {stagger: 1}}}}).diagnostics[0]
         odd.pointer.should.equal('/points/zones/a~1b~0c/stagger')

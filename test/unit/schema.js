@@ -24,7 +24,8 @@ describe('Schema', function() {
     // the schema describes the config after preprocessing, just like the engine sees it
     const canonical = raw => {
         const [config] = io.interpret(raw, () => {})
-        return prep.steps.reduce((result, step) => prep[step](result), config)
+        // copied like the engine's canonical output, so that dates end up the same
+        return u.deepcopy(prep.steps.reduce((result, step) => prep[step](result), config))
     }
 
     const engine_error = async config => {

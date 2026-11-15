@@ -6,19 +6,21 @@ const schema = require('../meta/schema.json')
 // keywords that describe one of several alternative forms of the same field
 const alternatives = ['type', 'enum', 'const', 'anyOf']
 
-// names that the engine's dotted paths would follow into the object prototype
-const reserved_names = ['__proto__', 'constructor', 'prototype']
+// deeper inputs are reported instead of being walked, so that no step runs out of stack
+const max_depth = 1000
 
 const kind = val => Array.isArray(val) ? 'array' : (val === null ? 'null' : typeof val)
 const plain = val => [Object.prototype, null].includes(Object.getPrototypeOf(val))
+const own = (val, key) => Object.prototype.hasOwnProperty.call(Object(val), key)
 
-// diagnostics point into the parsed input (before preprocessing) or the canonical config (after it),
+// diagnostics point into the parsed input, the unnested config or the canonical config, depending on their phase,
 // as path segments and a JSON pointer
 const escape = key => key.replace(/~/g, '~0').replace(/\//g, '~1')
 const unescape = segment => segment.replace(/~1/g, '/').replace(/~0/g, '~')
 const segments = pointer => pointer.split('/').slice(1).map(unescape)
 const dotted = pointer => segments(pointer).join('.')
 const field = pointer => pointer ? `field "${dotted(pointer)}"` : 'the config root'
+const subject = pointer => pointer ? `Field "${dotted(pointer)}"` : 'The config root'
 
 const located = (code, phase, pointer, message, extra) => Object.assign(
     {code, phase, path: segments(pointer), pointer, message},
@@ -29,21 +31,14 @@ const located = (code, phase, pointer, message, extra) => Object.assign(
 // Input inspection
 //
 
-// a dotted key may end in "constructor" or "prototype" (that's just a field), but never passes through them
-const unsafe_key = key => {
-    const levels = key.split('.')
-    const last = levels.pop()
-    return last == '__proto__' || levels.some(level => reserved_names.includes(level))
-}
-
-const unsafe_references = val => {
-    const paths = Array.isArray(val) ? val : [val]
-    return paths.filter(path => typeof path == 'string' && path.split('.').some(level => reserved_names.includes(level)))
-}
-
 // verify accepts the data YAML can describe: plain objects and arrays, strings, numbers, booleans,
 // null (or undefined) and dates, which preprocessing turns into empty objects, just like when processing
-const inspect = (val, pointer, ancestors, inspected, issues) => {
+const inspect = (val, pointer, depth, ancestors, inspected, issues) => {
+    // dotted keys count too, as they nest just as deep once unnested, whatever their value
+    if (depth > max_depth) {
+        issues.push(located('too_deep', 'parse', pointer, `Value of ${field(pointer)} is nested deeper than ${max_depth} levels!`))
+        return
+    }
     if (val === null || ['string', 'number', 'boolean', 'undefined'].includes(typeof val) || val instanceof Date) return
     if (typeof val != 'object' || !(Array.isArray(val) || plain(val))) {
         const type = Object.prototype.toString.call(val).slice(8, -1)
@@ -60,21 +55,80 @@ const inspect = (val, pointer, ancestors, inspected, issues) => {
     inspected.add(val)
     ancestors.add(val)
     for (const [key, child] of Object.entries(val)) {
-        const child_pointer = `${pointer}/${escape(key)}`
-        if (unsafe_key(key)) {
-            issues.push(located('unsafe_key', 'parse', child_pointer,
-                `Key "${key}" within ${field(pointer)} would reach the object prototype!`))
-            continue
-        }
-        if (key == '$extends') {
-            for (const path of unsafe_references(child)) {
-                issues.push(located('unsafe_reference', 'parse', child_pointer,
-                    `Inheritance target "${path}" in ${field(child_pointer)} would reach the object prototype!`, {actual: path}))
-            }
-        }
-        inspect(child, child_pointer, ancestors, inspected, issues)
+        inspect(child, `${pointer}/${escape(key)}`, depth + key.split('.').length, ancestors, inspected, issues)
     }
     ancestors.delete(val)
+}
+
+//
+// Preprocessing boundaries
+//
+
+// the engine follows dotted paths through anything a value has, inherited or not, so verify only lets it into data
+// the config owns: a level that resolves to an inherited value (like the object prototype, or an object, array,
+// string or number method) is reported instead, while missing levels are created just like the engine does
+const reach = (step, level) => step[level] && !own(step, level)
+
+// unnesting, replayed on a copy in the engine's order, to find the dotted keys that would leave the config
+const unnest_issues = (val, pointer, issues) => {
+    if (Array.isArray(val)) return val.map((child, i) => unnest_issues(child, `${pointer}/${i}`, issues))
+    if (kind(val) != 'object') return val
+    const result = {}
+    for (const [key, child] of Object.entries(val)) {
+        const child_pointer = `${pointer}/${escape(key)}`
+        const nested = unnest_issues(child, child_pointer, issues)
+        const levels = key.split('.')
+        const last = levels.pop()
+        let step = result
+        let outside
+        for (const level of levels) {
+            if (reach(step, level)) {
+                outside = level
+                break
+            }
+            if (step[level]) step = step[level]
+            else if (typeof step == 'object') step = step[level] = {}
+            // within strings or numbers, the engine can't create anything (and fails on its own)
+            else break
+        }
+        // setting "__proto__" would replace the object's prototype instead of setting a field
+        if (outside === undefined && last == '__proto__') outside = last
+        if (outside !== undefined) {
+            issues.push(located('unsafe_key', 'preprocess', child_pointer,
+                `Key "${key}" within ${field(pointer)} would reach "${outside}", which isn't part of the config!`, {stage: 'unnest'}))
+            continue
+        }
+        if (typeof step == 'object') step[last] = nested
+    }
+    return result
+}
+
+// inheritance targets, once unnesting has settled every $extends, are looked up the same way
+const reference_issues = (root, val, pointer, issues) => {
+    if (!['object', 'array'].includes(kind(val))) return
+    for (const [key, child] of Object.entries(val)) {
+        const child_pointer = `${pointer}/${escape(key)}`
+        if (key == '$extends' && kind(val) == 'object') {
+            const paths = Array.isArray(child) ? child.map((path, i) => [path, `${child_pointer}/${i}`]) : [[child, child_pointer]]
+            for (const [path, path_pointer] of paths) {
+                if (typeof path != 'string') continue
+                let step = root
+                for (const level of path.split('.')) {
+                    if (reach(step, level)) {
+                        issues.push(located('unsafe_reference', 'preprocess', path_pointer,
+                            `Inheritance target "${path}" in ${field(child_pointer)} would reach "${level}", which isn't part of the config!`,
+                            {stage: 'inherit', actual: path}))
+                        break
+                    }
+                    // a missing level within an object or array is created, anything else ends the lookup
+                    if (step[level]) step = step[level]
+                    else if (typeof step == 'object') step = {}
+                    else break
+                }
+            }
+        }
+        reference_issues(root, child, child_pointer, issues)
+    }
 }
 
 //
@@ -91,7 +145,7 @@ const compile = exports._compile = Ajv => {
         // collecting every error, so that independent problems are all reported
         return new Ajv({allErrors: true, verbose: true, allowUnionTypes: true, logger: false}).compile(schema)
     } catch (ex) {
-        throw new Error(`Ajv couldn't compile the config schema, which needs code generation (a strict content security policy blocks it): ${ex.message}`)
+        throw new Error(`Ajv couldn't compile the config schema (a content security policy that blocks code generation can cause this): ${ex.message.trim().replace(/[.!]$/, '')}!`)
     }
 }
 const validator = () => {
@@ -155,7 +209,7 @@ const generic = e => {
     return structure(
         code,
         e.instancePath,
-        `Field "${dotted(e.instancePath)}" ${describe(e.params)}!`,
+        `${subject(e.instancePath)} ${describe(e.params)}!`,
         {expected: {...e.params}, actual: e.data}
     )
 }
@@ -183,7 +237,7 @@ const alternative = errors => {
     return structure(
         values.length ? 'invalid_value' : 'invalid_type',
         pointer,
-        `Field "${dotted(pointer)}" should be ${forms.join(', or ')}!`,
+        `${subject(pointer)} should be ${forms.join(', or ')}!`,
         {expected, actual: errors[0].data}
     )
 }
@@ -263,13 +317,20 @@ exports.verify = raw => {
             {expected: {type: ['object']}, actual: type})])
     }
     const issues = []
-    inspect(config, '', new Set(), new Set(), issues)
+    inspect(config, '', 0, new Set(), new Set(), issues)
     if (issues.length) return fail(issues)
     if (!Object.keys(config).length) return empty()
 
-    // preprocessing, in the same order as the engine, which builds a new config from the input
+    // preprocessing, in the same order as the engine, which builds a new config from the input,
+    // as long as its dotted keys and inheritance targets only lead into the config itself
     result.checks.push('preprocess')
+    unnest_issues(config, '', issues)
+    if (issues.length) return fail(issues)
     for (const stage of prep.steps) {
+        if (stage == 'inherit') {
+            reference_issues(config, config, '', issues)
+            if (issues.length) return fail(issues)
+        }
         try {
             config = prep[stage](config)
         } catch (ex) {
@@ -281,8 +342,8 @@ exports.verify = raw => {
 
     // structure, as described by the schema
     result.checks.push('structure')
-    const valid = validator()
-    result.diagnostics = valid(config) ? [] : diagnose(valid.errors)
-    result.valid = !result.diagnostics.length
+    const validate_config = validator()
+    result.valid = validate_config(config)
+    result.diagnostics = result.valid ? [] : diagnose(validate_config.errors)
     return result
 }

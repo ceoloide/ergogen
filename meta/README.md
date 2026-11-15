@@ -26,9 +26,13 @@ It takes YAML or JSON text, or a config object holding the kind of data YAML des
 - strings, numbers, booleans, `null` or `undefined`
 - dates, which preprocessing turns into empty objects, just like when processing
 
-Anything else is reported instead of being converted, like cyclic data, functions, `BigInt`s, `Map`s, buffers or class instances.
-So are keys and `$extends` paths that the engine's dotted paths would follow into the object prototype, like `__proto__.x` or `constructor.prototype.x`.
-A plain `constructor` or `prototype` key is still fine.
+Anything else is reported instead of being converted, like cyclic data, functions, `BigInt`s, `Map`s, buffers or class instances, and so is nesting deeper than 1000 levels.
+
+The engine follows dotted keys and `$extends` paths through anything a value has, including what it inherits.
+So `verify` only lets them into data the config owns:
+- A level that resolves to an inherited value is reported instead, like `toString`, `constructor`, `__proto__`, or array, string or number methods (`list.push.x`).
+- So is setting `__proto__`.
+- A field the config owns can have any other name, like `constructor` or `toString`, and a dotted key can extend it once it's defined.
 
 JS code and KLE layouts can only be used with `ergogen.process`, as verifying them would mean running or converting them.
 Bundles aren't supported either.
@@ -53,7 +57,7 @@ Depending on the problem, it also has:
 - `line` and `column` (1-based) for syntax errors
 - `stage` (`unnest`, `inherit`, `parameterize` or `concat`) for preprocessing errors
 - `path` (key segments) and `pointer` (a JSON pointer) to the field itself, even when it's missing or unexpected.
-  These point into the parsed input for the `parse` phase, and into the canonical config for the `structure` phase.
+  These point into the parsed input for input and dotted key problems, into the unnested config for inheritance targets, and into the canonical config for structural problems.
 - `expected` and `actual` values, where they help
 
 | Code | Phase | Problem |
@@ -63,8 +67,9 @@ Depending on the problem, it also has:
 | `invalid_root` | `parse` | The config isn't an object (`actual` holds its type) |
 | `cyclic_value` | `parse` | A value contains itself |
 | `unsupported_value` | `parse` | A value isn't plain YAML or JSON data (`actual` holds its type) |
-| `unsafe_key` | `parse` | A key would reach the object prototype |
-| `unsafe_reference` | `parse` | An `$extends` path would reach the object prototype |
+| `too_deep` | `parse` | A value is nested deeper than 1000 levels, counting dotted keys |
+| `unsafe_key` | `preprocess` | A dotted key would reach something the config doesn't own |
+| `unsafe_reference` | `preprocess` | An `$extends` path would reach something the config doesn't own |
 | `preprocess_error` | `preprocess` | `$extends`, `$params` or `$concat` failed |
 | `missing_field` | `structure` | A required field is missing |
 | `unexpected_field` | `structure` | A field isn't allowed there |
@@ -128,15 +133,20 @@ A syntax error stops right away, with its position in the text:
 - Only the structure is checked. Point references, shape, footprint and template names and their own fields and params, required nets, math expressions, geometry and `meta.engine` compatibility are checked while processing.
 - Structural paths point into the canonical config, not into the source text. Mapping them back to lines would need a source map, which is future work.
 - Preprocessing errors carry the engine's message and the failing stage, but no path.
+- Some engine leniency isn't mirrored, as the schema keeps the intended types: `meta: null` or `references: null` are rejected, for example.
+- `ergogen.process` itself still follows dotted keys and `$extends` paths wherever they lead. Only `verify` refuses those that leave the config.
 - A value that fits none of the forms of a field gets a single diagnostic listing them all. A list mixing filter conditions and anchors can still get one diagnostic per form.
 
 ### Dependencies
 
-Ajv is only loaded and compiled the first time a config reaches the structural check, so `ergogen.process` never needs it.
+Ajv is only compiled the first time a config reaches the structural check.
+How it's loaded depends on the build:
 
-In Node, the `ajv` dependency (^8.20.0) is used.
-The UMD bundle in `dist/` takes Ajv from the global `ajv7` in browsers, or the `ajv` module with AMD.
-`dist/ajv7.min.js` from the `ajv-dist` package provides that global, and its latest release (8.17.1) has the same API.
+- **Node (`src/`):** the `ajv` dependency (^8.20.0) is required at that point too, so `ergogen.process` never loads it.
+- **The UMD bundle in `dist/`, with a browser global:** it reads `ajv7` when loading, but only uses it in `verify`. Without it, `process` still works, and `verify` throws.
+- **The UMD bundle in CommonJS or AMD:** these resolve the `ajv` module eagerly, as a regular dependency of the bundle.
+
+`dist/ajv7.min.js` from the `ajv-dist` package provides that global, and its latest release (8.17.1) has the same API as the Node version.
 
 Ajv compiles the schema into code, so `verify` needs a content security policy that allows it, like `'unsafe-eval'` in `script-src`.
 `ergogen.process` works either way.

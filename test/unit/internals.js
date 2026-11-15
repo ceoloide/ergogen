@@ -43,7 +43,7 @@ describe('Internals', function() {
             }
         }
         verify_lib._compile.bind(this, Blocked).should.throw('Code generation from strings disallowed')
-        verify_lib._compile.bind(this, Blocked).should.throw('needs code generation')
+        verify_lib._compile.bind(this, Blocked).should.throw('content security policy that blocks code generation can cause this): Code generation from strings disallowed!')
     })
 
     it('verify with unforeseen schema keywords', function() {
