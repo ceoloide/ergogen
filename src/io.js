@@ -131,7 +131,10 @@ exports.twodee = (model, options) => {
     })
 
     const result = {
-        dxf: makerjs.exporter.toDXF(assembly),
+        // TODO: makerjs maps "black" to ACI 0 (= BYBLOCK), which DXF viewers don't draw as black,
+        // so it's overridden with ACI 7 (black or white, contrasting the background, the same as
+        // "white"). Revisit and remove this workaround once makerjs fixes its black/white colors.
+        dxf: makerjs.exporter.toDXF(assembly, {layerOptions: {black: {color: 7}}}),
     }
     if (debug) {
         result.yaml = assembly

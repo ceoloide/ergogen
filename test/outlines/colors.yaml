@@ -1,0 +1,30 @@
+points:
+  zones:
+    matrix:
+outlines:
+  # the stacked part keeps its own color, while the uncolored cut (even through
+  # the stacked part) takes the color of the boolean chain
+  stacked:
+    - what: rectangle
+      size: [20, 10]
+      color: red
+    - what: rectangle
+      size: 10
+      adjust.shift: [20, 0]
+      operation: stack
+      color: blue
+    - what: circle
+      radius: 4
+      adjust.shift: [12.5, 0]
+      operation: subtract
+  # differently colored stacked parts are simplified separately, so the
+  # overlapping top and bottom edges are drawn in both colors
+  overlapping:
+    - what: rectangle
+      size: 10
+      color: red
+    - what: rectangle
+      size: 10
+      adjust.shift: [5, 0]
+      operation: stack
+      color: blue

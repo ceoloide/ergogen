@@ -9,6 +9,19 @@ const filter = require('./filter').parse
 const injected_outlines = require('./outlines/index')
 const hulljs = require('hull')
 
+// a new model wrapping (or replacing) an outline keeps its color for the uncolored geometry
+const carry = (from, to) => {
+    if (from.layer) to.layer = from.layer
+    return to
+}
+
+// finished outlines are colored drawings, but geometric consumers get their globally simplified versions
+// (an outline still in progress has no such version yet, so it's returned as is)
+const geometries = new WeakMap()
+const geometry = exports.geometry = outlines => new Proxy(outlines, {
+    get: (target, name) => geometries.get(target[name]) || target[name]
+})
+
 const binding = (base, bbox, point, units) => {
 
     let bind = a.trbl(point.meta.bind || 0, `${point.meta.name}.bind`)(units)
@@ -349,6 +362,15 @@ exports.parse = (config, points, units) => {
         // placeholder for the current outline
         outlines[outline_name] = {models: {}}
 
+        // stacking only collects (potentially overlapping) parts, so they're simplified together
+        // before any later step treats them as geometry
+        let stacked = false
+        const settle = () => {
+            if (!stacked) return
+            m.model.simplify(m.model.originate(outlines[outline_name]))
+            stacked = false
+        }
+
         // each export can consist of multiple parts
         // either sub-objects or arrays are fine...
         if (a.type(parts)() == 'array') {
@@ -382,6 +404,7 @@ exports.parse = (config, points, units) => {
             const expand = a.sane(part.expand || 0, `${name}.expand`, 'number')(units)
             const joints = a.in(a.sane(part.joints || 0, `${name}.joints`, 'number')(units), `${name}.joints`, [0, 1, 2])
             const scale = a.sane(part.scale || 1, `${name}.scale`, 'number')(units)
+            const color = part.color === undefined ? undefined : a.in(part.color, `${name}.color`, Object.keys(m.exporter.colors))
 
             // these keys are then removed, so ops can check their own unexpected keys without interference
             delete part.operation
@@ -394,9 +417,14 @@ exports.parse = (config, points, units) => {
             delete part.expand
             delete part.joints
             delete part.scale
+            delete part.color
+
+            // stacks keep referenced outlines as drawn, while other operations use their geometry
+            if (operation != u.stack) settle()
+            const sources = operation == u.stack ? outlines : geometry(outlines)
 
             // a prototype "shape" maker (and its units) are computed
-            const [shape_maker, shape_units] = (whats[what] || injected_outlines[what])(part, name, points, outlines, units)
+            const [shape_maker, shape_units] = (whats[what] || injected_outlines[what])(part, name, points, sources, units)
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
             // and then the shape is repeated for all where positions
@@ -407,20 +435,28 @@ exports.parse = (config, points, units) => {
                     shape = binding(shape, bbox, point, shape_units)
                 }
                 shape = point.position(shape) // ...actual positioning happens here
-                outlines[outline_name] = operation(outlines[outline_name], shape)
+                // stacked parts only color their own shape
+                if (color && operation == u.stack) u.recolor(shape, color)
+                outlines[outline_name] = carry(outlines[outline_name], operation(outlines[outline_name], shape))
             }
+            if (operation == u.stack) stacked = true
+
+            // other colored parts recolor the whole outline, which uncolored geometry then inherits
+            if (color && operation != u.stack) u.recolor(outlines[outline_name], color)
 
             if (scale !== 1) {
                 outlines[outline_name] = m.model.scale(outlines[outline_name], scale)
             }
     
             if (expand) {
-                outlines[outline_name] = m.model.outline(
+                settle()
+                outlines[outline_name] = carry(outlines[outline_name], m.model.outline(
                     outlines[outline_name], Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
-                )
+                ))
             }
 
             if (fillet) {
+                settle()
                 for (const [index, chain] of m.model.findChains(outlines[outline_name]).entries()) {
                     outlines[outline_name].models[`fillet_${part_name}_${index}`] = m.chain.fillet(chain, fillet)
                 }
@@ -429,7 +465,10 @@ exports.parse = (config, points, units) => {
 
         // final adjustments
         m.model.originate(outlines[outline_name])
-        m.model.simplify(outlines[outline_name])
+        // the drawing only merges paths of the same color, so differently colored overlaps all show
+        const drawing = u.simplify_by_layer(u.deepcopy(outlines[outline_name]))
+        geometries.set(drawing, m.model.simplify(outlines[outline_name]))
+        outlines[outline_name] = drawing
 
     }
 

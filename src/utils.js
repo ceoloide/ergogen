@@ -191,3 +191,39 @@ exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units
         return [shape, {low: bbox.low, high: bbox.high}]
     }, units]
 }
+
+// colors a model uniformly, removing any (otherwise overriding) color nested within
+exports.recolor = (model, color) => {
+    m.model.walk(model, {
+        onPath: wp => {
+            delete wp.pathContext.layer
+        },
+        beforeChildWalk: wm => {
+            delete wm.childModel.layer
+            return true
+        }
+    })
+    model.layer = color
+    return model
+}
+
+
+// simplifies an originated model separately for each (inherited or own) layer, so that overlapping
+// paths of different colors are all kept, while the surviving paths are merged in place
+exports.simplify_by_layer = model => {
+    const layers = {}
+    m.model.walk(model, {
+        onPath: wp => {
+            layers[wp.layer] = layers[wp.layer] || []
+            layers[wp.layer].push(wp)
+        }
+    })
+    for (const walked of Object.values(layers)) {
+        const proxy = {paths: {...walked.map(wp => wp.pathContext)}}
+        m.model.simplify(proxy)
+        for (const [index, wp] of walked.entries()) {
+            if (!proxy.paths[index]) delete wp.modelContext.paths[wp.pathId]
+        }
+    }
+    return model
+}
