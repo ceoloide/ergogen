@@ -1,7 +1,7 @@
 {
     "$schema": "http://json-schema.org/draft-07/schema#",
     "title": "Ergogen configuration schema",
-    "description": "Describes the canonical Ergogen config, i.e., after dotted keys are unnested, \"$extends\" inheritance is resolved and \"$params\"/\"$args\" templates are applied (see \"source/canonical.yaml\" in the debug output).",
+    "description": "Describes the canonical Ergogen config, i.e., after dotted keys are unnested, \"$extends\" inheritance is resolved, \"$params\"/\"$args\" templates are applied and \"$concat(...)\" strings are joined (see \"source/canonical.yaml\" in the debug output).",
     "type": "object",
     "properties": {
         "meta": {
@@ -109,7 +109,7 @@
     "required": ["points"],
     "definitions": {
         "number": {
-            "description": "A number, or a math expression string that can reference units and variables",
+            "description": "A number, or a math expression string that can reference units, variables and the triangle_sss/triangle_asa solvers",
             "type": ["number", "string"]
         },
         "xy": {
@@ -382,6 +382,35 @@
         "key": {
             "description": "Key-level attributes, extended in order global < zone < column < row < column-specific row. Unknown attributes are kept as point metadata, usable in filters and \"{{templates}}\". A null value (or array element) keeps the inherited value",
             "type": ["object", "null"],
+            "allOf": [
+                {
+                    "$ref": "#/definitions/key_fields"
+                }
+            ],
+            "propertyNames": {
+                "description": "Higher-level structure and engine-managed point metadata are reserved",
+                "not": {
+                    "enum": ["key", "zones", "columns", "rows", "zone", "col", "row"]
+                }
+            }
+        },
+        "key_mirror": {
+            "description": "Overrides applied to the mirrored copy of the key, which can relabel its zone, col and row",
+            "type": ["object", "null"],
+            "allOf": [
+                {
+                    "$ref": "#/definitions/key_fields"
+                }
+            ],
+            "propertyNames": {
+                "description": "Higher-level structure is reserved",
+                "not": {
+                    "enum": ["key", "zones", "columns", "rows"]
+                }
+            }
+        },
+        "key_fields": {
+            "type": ["object", "null"],
             "properties": {
                 "stagger": {
                     "description": "Vertical shift of the column relative to the previous one (read from the first key of the column)",
@@ -454,8 +483,7 @@
                     "type": ["string", "array", "object", "null"]
                 },
                 "mirror": {
-                    "description": "Overrides applied to the mirrored copy of the key",
-                    "$ref": "#/definitions/key"
+                    "$ref": "#/definitions/key_mirror"
                 }
             }
         },
@@ -502,9 +530,15 @@
             "type": "object",
             "properties": {
                 "what": {
-                    "description": "Shape type",
-                    "type": "string",
-                    "enum": ["rectangle", "circle", "polygon", "outline", "path", "hull"],
+                    "description": "Shape type (built-in or injected)",
+                    "anyOf": [
+                        {
+                            "enum": ["rectangle", "circle", "polygon", "outline", "path", "hull", "svg", "choc_hotswap_socket"]
+                        },
+                        {
+                            "type": "string"
+                        }
+                    ],
                     "default": "outline"
                 },
                 "operation": {
@@ -675,6 +709,79 @@
                         "required": ["points"],
                         "additionalProperties": false
                     }
+                },
+                {
+                    "if": {"properties": {"what": {"const": "svg"}}, "required": ["what"]},
+                    "then": {
+                        "properties": {
+                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
+                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
+                            "paths": {
+                                "$ref": "#/definitions/svg_paths"
+                            },
+                            "accuracy": {
+                                "description": "Accuracy of curve conversion (non-zero)",
+                                "$ref": "#/definitions/number",
+                                "default": 0.0001
+                            },
+                            "flip_horizontally": {
+                                "type": "boolean"
+                            },
+                            "flip_vertically": {
+                                "type": "boolean"
+                            },
+                            "origin": {
+                                "description": "Point of the paths to treat as their origin, before flipping",
+                                "$ref": "#/definitions/xy"
+                            }
+                        },
+                        "required": ["paths"],
+                        "additionalProperties": false
+                    }
+                },
+                {
+                    "if": {"properties": {"what": {"const": "choc_hotswap_socket"}}, "required": ["what"]},
+                    "then": {
+                        "properties": {
+                            "what": true, "operation": true, "where": true, "asym": true, "adjust": true,
+                            "bound": true, "fillet": true, "expand": true, "joints": true, "scale": true,
+                            "paths": {
+                                "description": "Accepted but ignored, as the socket shape is fixed",
+                                "$ref": "#/definitions/svg_paths"
+                            },
+                            "accuracy": {
+                                "description": "Accuracy of curve conversion (non-zero)",
+                                "$ref": "#/definitions/number",
+                                "default": 0.0001
+                            },
+                            "flip_horizontally": {
+                                "type": "boolean"
+                            },
+                            "flip_vertically": {
+                                "type": "boolean"
+                            },
+                            "origin": {
+                                "description": "Point of the paths to treat as their origin, before flipping",
+                                "$ref": "#/definitions/xy"
+                            }
+                        },
+                        "additionalProperties": false
+                    }
+                }
+            ]
+        },
+        "svg_paths": {
+            "description": "Closed SVG path data (the \"d\" attribute), as one string or a list unioned together",
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
                 }
             ]
         },

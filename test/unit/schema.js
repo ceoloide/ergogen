@@ -24,7 +24,7 @@ describe('Schema', function() {
     // the schema describes the config after preprocessing, just like the engine sees it
     const canonical = raw => {
         const [config] = io.interpret(raw, () => {})
-        return prep.parameterize(prep.inherit(prep.unnest(config)))
+        return prep.concat(prep.parameterize(prep.inherit(prep.unnest(config))))
     }
 
     const engine_error = async config => {
@@ -60,7 +60,7 @@ describe('Schema', function() {
         const features = {
             meta: {engine: '4.0', version: 'v1.2.3', author: 'Tester'},
             units: {kx: 'u + 1', cy: null},
-            variables: {ky: 'kx - 1', $default_autobind: 5},
+            variables: {ky: 'kx - 1', step: 'triangle_sss(3, 4, 5)', $default_autobind: 5},
             points: {
                 zones: {
                     matrix: {
@@ -69,7 +69,7 @@ describe('Schema', function() {
                         columns: {
                             pinky: {key: {splay: 5, origin: [0, -10], tags: ['outer']}},
                             ring: {
-                                key: {stagger: 3, spread: 'kx', mirror: {width: 20}},
+                                key: {stagger: 3, spread: 'kx', mirror: {width: 20, row: 'mirrored'}},
                                 rows: {top: '$unset'}
                             }
                         },
@@ -114,7 +114,12 @@ describe('Schema', function() {
                         {type: 'bezier', points: [{shift: [-5, 10]}, {shift: [25, -10]}], accuracy: 1}
                     ]},
                     copy: {what: 'outline', name: 'keys', origin: 'matrix_pinkybottom', operation: 'intersect', fillet: 0.5, scale: 1.1},
-                    dot: {what: 'circle', radius: 1, where: ['matrix_pinkybottom', {shift: [1, 0]}]}
+                    dot: {what: 'circle', radius: 1, where: ['matrix_pinkybottom', {shift: [1, 0]}]},
+                    svg: {
+                        what: 'svg', where: 'thumb', paths: ['M 0 0 L 0 -2.5 L -2.5 -2.5 Z'],
+                        accuracy: 0.001, flip_vertically: true, origin: [1, 1], operation: 'stack'
+                    },
+                    socket: {what: 'choc_hotswap_socket', where: 'thumb', origin: [0, 'step / 10'], flip_horizontally: true, operation: 'stack'}
                 },
                 grown: ['keys', {name: 'keys', expand: '2]'}, {name: 'keys', expand: 1, joints: 'round'}, '-shapes']
             },
@@ -165,6 +170,9 @@ describe('Schema', function() {
             [{points: {zones: {matrix: {stagger: 5}}}}, 'Unexpected key "stagger"', '/points/zones/matrix'],
             [{points: {zones: {matrix: {columns: {one: {spread: 5}}}}}}, 'Unexpected key "spread"', '/points/zones/matrix/columns/one'],
             [{points: {key: {skip: 'yes'}}}, 'should be of type boolean', '/points/key/skip'],
+            [{points: {key: {zone: 'x'}}}, 'Reserved key "zone"', '/points/key'],
+            [{points: {key: {mirror: {rows: {}}}}}, 'Reserved key "rows"', '/points/key/mirror'],
+            [{points: {zones: {matrix: {rows: {only: {key: {width: 1}}}}}}}, 'Reserved key "key"', '/points/zones/matrix/rows/only'],
             [{points: {key: {asym: 'middle'}}}, 'should be one of', '/points/key/asym'],
             [{points: {key: {shift: 5}}}, 'should be an array', '/points/key/shift'],
             [{points: {key: {orient: {ref: 'matrix_one_only'}}}}, 'should be of type number', '/points/key/orient'],
@@ -179,7 +187,9 @@ describe('Schema', function() {
             [{points: {zones: {matrix: {anchor: {shift: [1, 1], affect: 'xz'}}}}}, 'should be one of', '/points/zones/matrix/anchor'],
             [{points: {zones: {matrix: {anchor: {ref: 'matrix_one_only', aggregate: {parts: []}}}}}}, 'cannot appear together', '/points/zones/matrix/anchor'],
             // outlines
-            [{outlines: {bad: [{what: 'square'}]}}, 'should be one of', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'svg'}]}}, 'must be a string or an array', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'svg', paths: 'M 0 0 L 1 0 L 1 1 Z', flip_vertically: 'yes'}]}}, 'should be of type boolean', '/outlines/bad/0'],
+            [{outlines: {bad: [{what: 'choc_hotswap_socket', size: 5}]}}, 'Unexpected key "size"', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'rectangle', size: 5, radius: 5}]}}, 'Unexpected key "radius"', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'circle'}]}}, 'should be of type number', '/outlines/bad/0'],
             [{outlines: {bad: [{what: 'outline'}]}}, 'does not name an existing outline', '/outlines/bad/0'],
@@ -240,7 +250,21 @@ describe('Schema', function() {
         results.points.mirror_matrix.x.should.equal(60)
     })
 
-    it('leaves placement-dependent checks to the engine', async function() {
+    it('describes the preprocessed config', async function() {
+        // inheritance and concatenation produce what the schema validates, not the raw input
+        const raw = {
+            'points.zones.matrix': null,
+            outlines: {
+                base: [{what: 'rectangle', where: true, size: 18}],
+                cut: [{$extends: 'outlines.base.0', operation: '$concat("sub", "tract")', size: 10}]
+            }
+        }
+        violations(raw).should.not.deep.equal([])
+        violations(canonical(raw)).should.deep.equal([])
+        ;(await engine_error(raw)).should.equal('')
+    })
+
+    it('leaves placement- and injection-dependent checks to the engine', async function() {
         // mirror overrides only reach mirrored points, so a net set only there is accepted
         const mirror_only = {
             points: {zones: {matrix: null}, mirror: 30},
@@ -256,10 +280,23 @@ describe('Schema', function() {
         }
         violations(unmatched).should.not.deep.equal([])
         ;(await engine_error(unmatched)).should.equal('')
+
+        // outlines can be injected, so any shape name is accepted
+        const unknown = {points: {zones: {matrix: null}}, outlines: {bad: [{what: 'square'}]}}
+        violations(unknown).should.deep.equal([])
+        ;(await engine_error(unknown)).should.include('should be one of')
     })
 
-    it('matches the built-in registries', function() {
+    it('matches the built-in registries', async function() {
         const defs = schema.definitions
+
+        // outline shapes, from the engine's own list minus the test-only injections
+        const injected = Object.keys(require('../../src/outlines/index'))
+            .filter(name => !builtins('outlines').includes(name))
+        const probe = await engine_error({points: {zones: {matrix: null}}, outlines: {probe: [{what: '_'}]}})
+        const shapes = probe.match(/\[(.*)\]/)[1].split(', ').filter(name => !injected.includes(name))
+        defs.outline_part_object.properties.what.anyOf[0].enum.should.deep.equal(shapes)
+        defs.outline_part_object.allOf.map(cond => cond.if.properties.what.const).should.have.members(shapes)
 
         // footprint names, params and their types
         const footprint_names = defs.footprint.properties.what.anyOf[0].enum
