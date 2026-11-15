@@ -17,3 +17,14 @@ outlines:
       radius: 4
       adjust.shift: [12.5, 0]
       operation: subtract
+  # differently colored stacked parts are simplified separately, so the
+  # overlapping top and bottom edges are drawn in both colors
+  overlapping:
+    - what: rectangle
+      size: 10
+      color: red
+    - what: rectangle
+      size: 10
+      adjust.shift: [5, 0]
+      operation: stack
+      color: blue

@@ -206,3 +206,24 @@ exports.recolor = (model, color) => {
     model.layer = color
     return model
 }
+
+
+// simplifies an originated model separately for each (inherited or own) layer, so that overlapping
+// paths of different colors are all kept, while the surviving paths are merged in place
+exports.simplify_by_layer = model => {
+    const layers = {}
+    m.model.walk(model, {
+        onPath: wp => {
+            layers[wp.layer] = layers[wp.layer] || []
+            layers[wp.layer].push(wp)
+        }
+    })
+    for (const walked of Object.values(layers)) {
+        const proxy = {paths: {...walked.map(wp => wp.pathContext)}}
+        m.model.simplify(proxy)
+        for (const [index, wp] of walked.entries()) {
+            if (!proxy.paths[index]) delete wp.modelContext.paths[wp.pathId]
+        }
+    }
+    return model
+}

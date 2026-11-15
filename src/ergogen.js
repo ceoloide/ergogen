@@ -71,8 +71,11 @@ const process = async (raw, options={}, logger=()=>{}) => {
         empty = false
     }
 
+    // cases and pcbs are physical, so they use the geometry of the outlines, not their colored drawings
+    const geometry = outlines_lib.geometry(outlines)
+
     logger('Modeling cases...')
-    const cases = cases_lib.parse(config.cases || {}, outlines, units)
+    const cases = cases_lib.parse(config.cases || {}, geometry, units)
     results.cases = {}
     for (const [case_name, case_script] of Object.entries(cases)) {
         if (!debug && case_name.startsWith('_')) continue
@@ -81,7 +84,7 @@ const process = async (raw, options={}, logger=()=>{}) => {
     }
 
     logger('Scaffolding PCBs...')
-    const pcbs = pcbs_lib.parse(config, points, outlines, units)
+    const pcbs = pcbs_lib.parse(config, points, geometry, units)
     results.pcbs = {}
     for (const [pcb_name, pcb_text] of Object.entries(pcbs)) {
         if (!debug && pcb_name.startsWith('_')) continue

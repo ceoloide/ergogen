@@ -314,14 +314,16 @@ describe('Interface', function() {
         const ref = (name, color) => ({what: 'outline', name, color})
         // red add, blue stack, uncolored subtract cutting through both
         const stacked = () => [rect('red'), rect('blue', 'stack', [20, 0], 10), circle(undefined, 'subtract', [12.5, 0])]
+        // the same square, drawn in red and blue
+        const twins = () => [rect('red', 'add', [0, 0], 10), rect('blue', 'stack', [0, 0], 10)]
         const config = {
-            points: {zones: {matrix: {columns: {col: {}}, rows: {row: {}}}}},
+            points: {zones: {matrix: {columns: {col: {}}, rows: {row: {}}}}, mirror: 50},
             outlines: {
                 kept: [rect('red'), circle(undefined, 'subtract', [10, 0])],
                 swapped: [rect('red'), circle('blue', 'subtract', [10, 0])],
                 stacked: stacked(),
                 recolored: [...stacked(), circle('green', 'add', [-10, 0])],
-                inherited: [rect('red'), rect(undefined, 'stack', [20, 0], 10)],
+                inherited: [rect('red'), rect(undefined, 'stack', [15, 0], 10)],
                 referenced: [ref('stacked'), circle(undefined, 'add', [0, 20], 2)],
                 overridden: [ref('stacked', 'lime')],
                 retained: [circle('navy', 'add', [0, 20], 2), ref('stacked')],
@@ -332,11 +334,19 @@ describe('Interface', function() {
                 curve: [{what: 'path', color: 'red', segments: [
                     {type: 'bezier', points: [at([0, 0]), at([10, 20]), at([20, -20]), at([30, 0])]}
                 ]}],
-                square: [rect('black', 'add', [0, 0], 10), rect('white', 'stack', [5, 0], 10)]
+                square: [rect('black', 'add', [0, 0], 10), rect('white', 'stack', [5, 0], 10)],
+                twins: twins(),
+                // stacked references keep their drawing, wherever they're placed
+                placed: [{...ref('twins'), operation: 'stack', where: true, origin: {shift: [1, 2]}, scale: 2}],
+                // but other operations, and later steps on stacks, use simplified geometry
+                framed: [rect(undefined, 'add', [0, 0], [40, 30]), {...ref('twins'), operation: 'subtract'}],
+                cut: [...twins(), circle(undefined, 'subtract', [5, 0], 2)],
+                rounded: [rect('red', 'add', [0, 0], 10), {...rect('blue', 'stack', [0, 0], 10), fillet: 1}]
             },
-            cases: {plate: [{name: 'stacked', extrude: 1}, {name: 'square', extrude: 2}]},
-            pcbs: {main: {outlines: [{outline: 'recolored'}, {outline: 'curve'}, {outline: 'square'}]}}
+            cases: {plate: ['stacked', 'square', 'twins', 'placed', 'framed', 'cut', 'rounded'].map((name, i) => ({name, extrude: i + 1}))},
+            pcbs: {main: {outlines: ['recolored', 'curve', 'square', 'twins', 'placed', 'framed', 'rounded'].map(outline => ({outline}))}}
         }
+        const source = JSON.stringify(config)
         const strip = (obj, key) => JSON.parse(JSON.stringify(obj, (k, v) => k == key ? undefined : v))
         const colored = await ergogen.process(config, {debug: true})
         const uncolored = await ergogen.process(strip(config, 'color'), {debug: true})
@@ -357,8 +367,8 @@ describe('Interface', function() {
         layers('stacked').should.deep.equal({red: 7, blue: 5})
         // until an explicit boolean color recolors everything, stacked parts included
         layers('recolored').should.deep.equal({green: 14})
-        // uncolored stacked parts take the chain color too
-        layers('inherited').should.deep.equal({red: 8})
+        // uncolored stacked parts take the chain color too, so they're merged with it
+        layers('inherited').should.deep.equal({red: 5})
         // references keep their colors, without starting a chain in the outline using them...
         layers('referenced').should.deep.equal({red: 7, blue: 5, default: 1})
         layers('scaled').should.deep.equal({red: 7, blue: 5})
@@ -369,12 +379,26 @@ describe('Interface', function() {
         Object.keys(layers('expanded')).should.deep.equal(['red'])
         Object.keys(layers('filleted')).should.deep.equal(['red'])
 
+        // different colors are only simplified separately, so their overlaps all show in the drawings...
+        layers('square').should.deep.equal({black: 4, white: 4})
+        layers('twins').should.deep.equal({red: 4, blue: 4})
+        layers('placed').should.deep.equal({red: 8, blue: 8})
+        // ...but not in their geometry, used when subtracting or by stacks before later steps
+        layers('framed').should.deep.equal({default: 4, red: 4})
+        layers('cut').should.deep.equal({red: 6})
+        layers('rounded').should.deep.equal({red: 8})
+        m.model.findChains(colored.outlines.rounded.yaml).length.should.equal(1)
+
         // colors are only layers, so the geometry of outlines, cases and pcbs stays the same
+        const overlapping = ['square', 'twins', 'placed']
         for (const name of Object.keys(config.outlines)) {
+            if (overlapping.includes(name)) continue
             strip(colored.outlines[name].yaml, 'layer').should.deep.equal(uncolored.outlines[name].yaml)
         }
         colored.cases.should.deep.equal(uncolored.cases)
         colored.pcbs.should.deep.equal(uncolored.pcbs)
+        // and the inputs are left untouched
+        JSON.stringify(config).should.equal(source)
 
         // uniformly colored curves keep their native svg reconstruction
         const count = (str, regex) => (str.match(regex) || []).length

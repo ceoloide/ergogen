@@ -174,4 +174,35 @@ describe('Utils', function() {
         }})
     })
 
+    it('simplify by layer', function() {
+        // overlapping collinear lines, red by inheritance or blue by their own (or their model's) layer
+        const model = () => ({layer: 'red', paths: {
+            a: u.line([0, 0], [2, 0]),
+            b: u.line([1, 0], [3, 0]),
+            c: {...u.line([1, 0], [3, 0]), layer: 'blue'}
+        }, models: {
+            nested: {layer: 'blue', paths: {d: u.line([2, 0], [4, 0])}}
+        }})
+        const lines = model => {
+            const res = []
+            m.model.walk(model, {onPath: wp => res.push([wp.layer, wp.pathContext.origin, wp.pathContext.end])})
+            return res
+        }
+
+        // a global simplify merges every color into the first line...
+        lines(m.model.simplify(model())).should.deep.equal([['red', [0, 0], [4, 0]]])
+        // ...while this only merges within each color, keeping the original models
+        const layered = model()
+        const nested = layered.models.nested
+        u.simplify_by_layer(layered).should.equal(layered)
+        lines(layered).should.deep.equal([['red', [0, 0], [3, 0]], ['blue', [1, 0], [4, 0]]])
+        layered.models.nested.should.equal(nested)
+        nested.paths.should.deep.equal({})
+
+        // a single (or no) color is simplified just like before
+        const uncolored = () => JSON.parse(JSON.stringify(model(), (k, v) => k == 'layer' ? undefined : v))
+        u.simplify_by_layer(uncolored()).should.deep.equal(m.model.simplify(uncolored()))
+        u.simplify_by_layer({}).should.deep.equal({})
+    })
+
 })

@@ -1,0 +1,11 @@
+points:
+  zones:
+    matrix:
+outlines:
+  # subtracting reads geometry instead of drawings, but unknown names still fail
+  framed:
+    - what: rectangle
+      size: 20
+    - what: outline
+      name: missing
+      operation: subtract
