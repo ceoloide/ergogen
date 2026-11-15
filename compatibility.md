@@ -26,22 +26,27 @@ The differences below were observed with `js-yaml` 3.14.1 and 4.2.0, the locked 
 
 ### Empty items in flow sequences
 
-Empty items in a flow sequence are now a parse error:
+Empty items in a flow sequence are now a parse error. For example:
 
 ```yaml
 left.key.bind: [,10,,]
 ```
 
-```
-expected the node content, but found ','
-```
+The CLI reports `Input is not valid YAML, JSON, or JS Code!`.
+The underlying `js-yaml` diagnostic is `expected the node content, but found ','`.
 
 `js-yaml` 3 read each empty item as `null` and dropped the trailing one, so `[,10,,]` became `[null, 10, null]`.
-Write every value explicitly instead.
-For `bind`, `[0, 10, 0, 0]` produces the same outline as `[,10,,]` did.
+Write omitted items explicitly as `null` or `~`: `[null, 10, null]` or `[~, 10, ~]` preserves that parsed array.
+When Ergogen merges arrays, `null` keeps the inherited value at that index; it does not set it to zero.
+For example, overriding an inherited `bind: [3, 3, 3, 3]` with `[~, 10, ~]` gives `[3, 10, 3, 3]`.
+Use `[0, 10, 0, 0]` only when those other sides should be zero; it matches the sparse form only when their inherited values are zero.
+A sparse array without enough inherited values can still fail bind validation, which requires four numeric values.
 A single trailing comma, as in `[1, 2,]`, is still accepted.
 
 ### Scalars
+
+These are examples of observed differences, not an exhaustive list.
+The table describes the underlying loader results; rejected input reaches the CLI as the generic error above.
 
 | Input | js-yaml 3 | js-yaml 4 |
 | --- | --- | --- |
@@ -88,7 +93,8 @@ In 4.2.x this `width` was silently ignored and the key kept its default width.
 Move the fields up one level (`rows.bottom.width: 30`).
 `zone`, `col` and `row` were overwritten by the engine, so a custom value never reached the point.
 
-An object-valued `mirror` override directly inside a key-level declaration rejects only `key`, `zones`, `columns` and `rows`, so it can still relabel the mirrored point with `mirror.row` and similar.
+An object-valued `mirror` override directly inside a key-level declaration rejects only `key`, `zones`, `columns` and `rows`, so it can still relabel the mirrored point with `mirror.row`, `mirror.col.name` and `mirror.zone.name`.
+`col` and `zone` must remain objects; scalar `mirror.col` or `mirror.zone` overrides are rejected.
 The check is shallow: nested metadata such as `custom.key` is still allowed.
 
 ## Hull outlines
