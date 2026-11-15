@@ -1,15 +1,22 @@
 name: Check for 100% test coverage
 on:
   pull_request:
-    branches: ["develop"]
+    branches: ["develop", "v4.3.0"]
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # the exact minimums declared in package.json engines, plus the maintained release lines
+        node-version: ['20.19.0', '22.12.0', '22.x', '24.x', '26.x']
     steps:
       - uses: actions/checkout@v7
-      - name: Use Node.js
+      - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v6
         with:
-          node-version: '24.x'
-      - run: npm install
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci
       - run: npm run coverage
+      - run: npx nyc check-coverage --statements 100 --branches 100 --functions 100 --lines 100
+      - run: npm run build
