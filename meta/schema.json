@@ -257,10 +257,10 @@
             ]
         },
         "mirror": {
-            "description": "Mirror axis: a literal x coordinate, or an anchor (with an optional distance) whose x is used. Math expressions only work within the anchor form",
+            "description": "Mirror axis: an x coordinate, or an anchor (with an optional distance) whose x is used",
             "anyOf": [
                 {
-                    "type": "number"
+                    "$ref": "#/definitions/number"
                 },
                 {
                     "type": "object",

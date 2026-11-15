@@ -230,12 +230,14 @@ describe('Schema', function() {
         mismatches.should.deep.equal([])
     })
 
-    it('rejects mirror axes the engine cannot evaluate', async function() {
-        // a string axis is passed through unevaluated, so an expression silently yields NaN
-        const config = {points: {zones: {matrix: null}, mirror: 'u'}}
-        const results = await ergogen.process(u.deepcopy(config), {debug: true})
-        results.points.mirror_matrix.x.should.be.NaN
-        violations(config).should.include('/points/mirror must be number')
+    it('accepts numeric mirror axes', async function() {
+        // expressions are valid numbers, even though the engine doesn't evaluate them yet (ergogen/ergogen#171)
+        for (const axis of [30, '30', 'u', 'u * 2']) {
+            violations({points: {zones: {matrix: null}, mirror: axis}}).should.deep.equal([])
+            violations({points: {zones: {matrix: {mirror: axis}}}}).should.deep.equal([])
+        }
+        const results = await ergogen.process({points: {zones: {matrix: null}, mirror: '30'}}, {debug: true})
+        results.points.mirror_matrix.x.should.equal(60)
     })
 
     it('leaves placement-dependent checks to the engine', async function() {
