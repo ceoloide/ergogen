@@ -11,6 +11,8 @@ const a = require('./assert')
 //  - other visible geometry, transforms, clipping, masking, markers, filters and nested viewports are rejected
 //  - path data has to follow the svg path grammar, and is passed on with its tokens separated
 //  - css (style elements, display, visibility, stroke, fill) never selects or expands paths
+//  - every inline style declaration is checked for transforms and references, without a cascade, and
+//    comments or escapes in inline styles (which could hide a property name) are rejected
 
 const svg_namespace = 'http://www.w3.org/2000/svg'
 
@@ -140,15 +142,20 @@ const parse_attributes = (raw, name) => {
     return attributes
 }
 
-// css properties set through an inline style attribute
-const style_properties = style => {
-    const properties = own()
-    for (const declaration of (style || '').split(';')) {
+// every declaration of an inline style attribute, as [property, value] pairs (vendor prefixes and
+// "!important" removed), so that no later, duplicate or less important declaration can hide another one
+const style_declarations = (style, qname, name) => {
+    if (style === undefined) return []
+    a.assert(!style.includes('/*') && !style.includes('\\'), `SVG outline "${name}" has a comment or an escape in the style of <${qname}>, ` +
+        'which is not supported! Remove it from the style before exporting.')
+    const declarations = []
+    for (const declaration of style.split(';')) {
         const colon = declaration.indexOf(':')
         if (colon == -1) continue
-        properties[declaration.slice(0, colon).trim().toLowerCase()] = declaration.slice(colon + 1).trim()
+        const property = declaration.slice(0, colon).trim().toLowerCase().replace(/^-(?:webkit|moz|ms|o)-/, '')
+        declarations.push([property, declaration.slice(colon + 1).replace(/!\s*important\s*$/i, '')])
     }
-    return properties
+    return declarations
 }
 
 const active = value => value !== undefined && value.trim() !== '' && value.trim() != 'none'
@@ -242,12 +249,13 @@ exports.extract = (text, name) => {
             'Flatten the drawing into a single <svg> before exporting.')
         a.assert(local == 'svg' || local == 'path' || containers.includes(local), `SVG outline "${name}" contains an unsupported element <${qname}>!`)
 
-        const style = style_properties(attributes.style)
+        const declarations = style_declarations(attributes.style, qname, name)
+        const styled = property => declarations.some(([key, value]) => key == property && active(value))
         for (const [property, reason] of Object.entries(references)) {
-            a.assert(!active(attributes[property]) && !active(style[property]), `SVG outline "${name}" uses "${property}" on <${qname}>, ${reason}`)
+            a.assert(!active(attributes[property]) && !styled(property), `SVG outline "${name}" uses "${property}" on <${qname}>, ${reason}`)
         }
         frame.transformed = parent && parent.transformed
-        if (active(attributes.transform) || transforms.some(property => active(style[property]))) frame.transformed = qname
+        if (active(attributes.transform) || transforms.some(styled)) frame.transformed = qname
 
         if (local == 'path') {
             a.assert(frame.transformed === undefined, `SVG outline "${name}" has a transform on <${frame.transformed}> affecting path ${paths.length}, ` +
