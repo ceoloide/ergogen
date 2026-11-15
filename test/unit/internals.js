@@ -4,7 +4,7 @@ const kicad8 = require('../../src/templates/kicad8')
 const jszip = require('jszip')
 const ergogen = require('../../src/ergogen')
 const io = require('../../src/io')
-const outline_types = require('../../src/outlines')._outline_types
+const whats = require('../../src/outlines')._whats
 
 describe('Internals', function() {
 
@@ -74,9 +74,9 @@ describe('Internals', function() {
     const prototype_names = ['constructor', 'toString', '__proto__']
 
     it('should replace built-in outline types with injections', async function() {
-        const registry_before = Object.keys(outline_types)
+        const registry_before = Object.keys(whats)
         const originals = {}
-        for (const what of builtin_outlines) originals[what] = outline_types[what]
+        for (const what of builtin_outlines) originals[what] = whats[what]
         const sized_rectangle = outline_config('rectangle')
         sized_rectangle.outlines.test[0].size = 10
         const svg_rectangle = outline_config('rectangle')
@@ -101,14 +101,14 @@ describe('Internals', function() {
         }
 
         // restoring the originals brings back the built-in behavior
-        Object.keys(outline_types).should.deep.equal(registry_before)
+        Object.keys(whats).should.deep.equal(registry_before)
         await ergogen.process(svg_rectangle).should.be.rejectedWith('Unexpected key "accuracy"')
         const result = await ergogen.process(sized_rectangle)
         result.outlines.test.dxf.should.exist
     })
 
     it('should dispatch prototype-named outline injections as own entries', async function() {
-        const registry_before = Object.keys(outline_types)
+        const registry_before = Object.keys(whats)
         // not injected yet, so nothing is inherited from Object.prototype
         for (const what of prototype_names) {
             await ergogen.process(outline_config(what)).should.be.rejectedWith('should be one of')
@@ -125,13 +125,13 @@ describe('Internals', function() {
                 factories[what].calledOnce.should.be.true
             }
         } finally {
-            for (const what of prototype_names) delete outline_types[what]
+            for (const what of prototype_names) delete whats[what]
         }
-        Object.keys(outline_types).should.deep.equal(registry_before)
+        Object.keys(whats).should.deep.equal(registry_before)
     })
 
     it('should replace library outlines with later injections', async function() {
-        const original = outline_types.choc_hotswap_socket
+        const original = whats.choc_hotswap_socket
         const replacement = sinon.spy(square_outline)
         try {
             ergogen.inject('outline', 'choc_hotswap_socket', replacement)
@@ -141,12 +141,12 @@ describe('Internals', function() {
         } finally {
             ergogen.inject('outline', 'choc_hotswap_socket', original)
         }
-        outline_types.choc_hotswap_socket.should.equal(original)
+        whats.choc_hotswap_socket.should.equal(original)
     })
 
     it('should inject bundled outlines with prototype and built-in names', async function() {
-        const registry_before = Object.keys(outline_types)
-        const original_rectangle = outline_types.rectangle
+        const registry_before = Object.keys(whats)
+        const original_rectangle = whats.rectangle
         const zip = new jszip()
         zip.file('config.yaml', [
             'points.zones.matrix.columns.pos.key: {x: 0, y: 0}',
@@ -166,10 +166,10 @@ describe('Internals', function() {
             result.outlines.svg_test.dxf.should.exist
             result.outlines.builtin_test.dxf.should.exist
         } finally {
-            for (const what of prototype_names) delete outline_types[what]
+            for (const what of prototype_names) delete whats[what]
             ergogen.inject('outline', 'rectangle', original_rectangle)
         }
-        Object.keys(outline_types).should.deep.equal(registry_before)
+        Object.keys(whats).should.deep.equal(registry_before)
     })
 
     it('should allow injecting footprints', async function() {

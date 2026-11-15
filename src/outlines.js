@@ -310,7 +310,7 @@ const svg = (config, name, points, outlines, units) => {
 
 // built-in and library outlines share one registry, which injections can extend or override
 // it has no prototype, so names like "constructor" or "__proto__" are ordinary entries
-const outline_types = exports._outline_types = Object.assign(Object.create(null), {
+const whats = exports._whats = Object.assign(Object.create(null), {
     rectangle,
     circle,
     polygon,
@@ -369,7 +369,7 @@ exports.parse = (config, points, units) => {
 
             // process keys that are common to all part declarations
             const operation = u[a.in(part.operation || 'add', `${name}.operation`, ['add', 'subtract', 'intersect', 'stack'])]
-            const what = a.in(part.what || 'outline', `${name}.what`, Object.keys(outline_types))
+            const what = a.in(part.what || 'outline', `${name}.what`, Object.keys(whats))
             const bound = !!part.bound
             const asym = a.asym(part.asym || 'source', `${name}.asym`)
 
@@ -398,7 +398,7 @@ exports.parse = (config, points, units) => {
             delete part.scale
 
             // a prototype "shape" maker (and its units) are computed
-            const [shape_maker, shape_units] = outline_types[what](part, name, points, outlines, units)
+            const [shape_maker, shape_units] = whats[what](part, name, points, outlines, units)
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
             // and then the shape is repeated for all where positions
@@ -439,5 +439,5 @@ exports.parse = (config, points, units) => {
 }
 
 exports.inject_outline = (name, outline) => {
-    outline_types[name] = outline
+    whats[name] = outline
 }
