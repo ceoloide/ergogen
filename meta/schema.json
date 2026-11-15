@@ -208,6 +208,7 @@
         "anchor_object": {
             "type": "object",
             "not": {
+                "type": "object",
                 "required": ["ref", "aggregate"]
             },
             "properties": {
@@ -287,6 +288,7 @@
                 {
                     "type": "object",
                     "not": {
+                        "type": "object",
                         "required": ["ref", "aggregate"]
                     },
                     "properties": {

@@ -5,6 +5,8 @@ const jszip = require('jszip')
 const ergogen = require('../../src/ergogen')
 const io = require('../../src/io')
 const whats = require('../../src/outlines')._whats
+const yaml = require('js-yaml')
+const verify_lib = require('../../src/verify')
 
 describe('Internals', function() {
 
@@ -22,6 +24,29 @@ describe('Internals', function() {
             config.onPath({pathContext: {type: 'nonexistent'}})
         })
         kicad8.convert_outline.bind(this).should.throw("Can't convert path type")
+    })
+
+    it('verify without parser positions', function() {
+        // only yaml exceptions carry a position, so others are reported without one
+        sinon.stub(yaml, 'load').throws(new Error('parser crashed'))
+        ergogen.verify('points.zones.matrix:').diagnostics.should.deep.equal([
+            {code: 'syntax_error', phase: 'parse', message: 'Input is not valid YAML or JSON: parser crashed!'}
+        ])
+    })
+
+    it('verify with unforeseen schema keywords', function() {
+        // keywords the schema doesn't use yet fall back to ajv's own wording
+        verify_lib._diagnose([
+            {keyword: 'minimum', instancePath: '/units/a', params: {comparison: '>=', limit: 0}, message: 'must be >= 0', data: -1}
+        ]).should.deep.equal([{
+            code: 'invalid_config',
+            phase: 'structure',
+            path: ['units', 'a'],
+            pointer: '/units/a',
+            message: 'Field "units.a" must be >= 0!',
+            expected: {comparison: '>=', limit: 0},
+            actual: -1
+        }])
     })
 
     it('injection', function() {
