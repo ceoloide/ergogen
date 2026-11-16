@@ -16,7 +16,7 @@
     },
     "dependencies": {
         "fs-extra": "^11.3.2",
-        "hull": "github:andriiheonia/hull",
+        "hull": "github:ceoloide/hull#ef418a181f0bfbce37af4638c20438ca8374fffe",
         "js-yaml": "^4.1.1",
         "jszip": "^3.10.1",
         "kle-serial": "github:ergogen/kle-serial#ergogen",
