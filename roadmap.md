@@ -1,13 +1,11 @@
 # Ergogen TODO
 
-
-
 ## CLI
 
 ### Major
 
 - Straightforward-ize `extends` behaviour for tagging (see #129)
-- Un-exclude kicad8 template from coverage during default kicad version switch!
+- Switch the default PCB template to `kicad8`
 - Merge, generalize, uniform-ize and externalize footprints!
     - onnx-like incremental opset versioning
     - Template for creating them, built-in variables they can use, documentation, external links, etc.
@@ -17,7 +15,6 @@
         - Also, rename `local_net` to `local`, probably
     - Also considering how (or, on which layer) they define their silks, universal mirroring behaviour (see ixy/xy/sxy note), etc.
     - When breaking anyway, remove a lot of footprints from built-in status
-        - And make sure the external infrastructure + bundling support is there to make up for it
 
 ### Minor
 
@@ -31,17 +28,18 @@
     - Make these usable in the `outlines` section through a new `what`
 - Add footprint sanitization to check compatibility for externally loaded ones
     - Or to double check internal ones for compliance
-- 3D orient for cases
 - Even more extreme anchor stuff
-    - Checkpoints, intersects, distances, weighted combinations?
+    - Checkpoints
+    - Distances
+    - Weighted combinations
     - Extend the "turning towards" capabilities of `orient` and `rotate` to `shift` as well (to move as much as it would take the current anchor location to get there)
-- SVG input (for individual outlines, or even combinations parsed by line color, etc.)
-    - And once that's done, possibly even STL or other input for cases or pcb renders
+- Parse combinations of outlines by SVG line color
+- Consider STL or other input for cases or PCB renders
 - Support text silk output to PCBs (in configurable fonts, through SVG?)
     - Maybe a partial markdown preprocess to support bold and italic?
 - Look into gr_curve to possibly add beziers to the kicad conversion
-    - Support curves (arcs as well as Béziers) in polygons
-    - Also, three point arcs, tangents, earier "circle tools" in general
+    - Support curves directly in `polygon` point definitions
+    - Tangents and other circle tools
 - Add snappable line footprint
 - Figure out a manual, but still reasonably comfortable routing method directly from the config
 - Eeschema support for pcbs
@@ -49,26 +47,19 @@
 - Export **to** KLE?
 - Include 3D models paths in kicad output for visualization
     - Also, provide 3D models for built-in footprints
-- Look into kicad 5 vs. 6 output format
 - Update json schema and add syntax highlight to editors
 - Support different netclasses
 - Allow a potential filter for filleting (only on angles =90°, <45°, left turn vs. right turn when going clockwise, etc.)
 - Add `operation: skip` to allow easily "commenting out" whole outline parts
 - Better error message for negative rectangle (it may not only be because of corner/bevel)
 
-
 ### Patch
 
-- YAML lib v4 update - breaking changes in how undefined is handled!
-- Prevent double mirroring (see discord "mirror_mirror_")
 - Check unexpected keys at top level, too
 - Better error handling for the fillet option?
-- Integration and end2end tests to get coverage to 100%
 - Add custom fillet implementation that considers line-line connections only?
 - Add nicer filleting error messages when makerjs dies for some reason
-- Empty nets should be allowed (to mean unconnected)
 - Debug point (orient+shift) differences in circles vs. polygons (see Discord)
-
 
 ## WEBUI
 
@@ -76,8 +67,6 @@
 
 - Change over to Cache's live preview implementation
 - Add missing KLE functionality
-- Create browserified version of semver lib
-    - Or at least a shim with a console warning
 - Visualizing multiple outlines at once, with different colors
 - Add snapping/measurement capabilities for quicker iteration
 
@@ -95,8 +84,6 @@
 - Streamline (and document) an update pipeline
 - Add puppeteer tests
 
-
-
 ## DOCS
 
 - n00b tutorials
@@ -110,18 +97,7 @@
         - Change outline fields to have their full anchor support documented
         - Mention the ability to opt out of gluing!
         - Key-level defaults are based around u's, not 19!
-- Contribution guidelines
-    - Include test commands (npm test, npm run coverage, --what switch, --dump switch)
+- Document contributor test commands (`npm test`, `npm run coverage`, `--what`, `--dump`)
 - Changelog, Roadmap
 - A public catalog of real-life ergogen configs
     - Probably could be the same as the separate examples repo for the dropdown
-
-
-
-
-
-
-
-
-
-
