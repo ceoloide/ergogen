@@ -34,8 +34,11 @@ const attribute_regex = new RegExp(`(${xml_name})\\s*=\\s*(?:"([^"<]*)"|'([^'<]*
 const start_tag_regex = new RegExp(`<(${xml_name})((?:\\s+${xml_name}\\s*=\\s*(?:"[^"<]*"|'[^'<]*'))*)\\s*(\\/?)>`, 'y')
 const end_tag_regex = new RegExp(`<\\/(${xml_name})\\s*>`, 'y')
 const doctype_regex = /<!DOCTYPE[^<>\[\]]*>/y
-const number_regex = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/
-const length_regex = /^\s*([+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)(mm)?\s*$/
+// the svg number grammar, shared by root attributes and path data (the dot and the fraction are optional
+// together, so a failed match cannot retry every split of a long run of digits, which took quadratic time)
+const number_source = '[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?'
+const number_regex = new RegExp(`^${number_source}$`)
+const length_regex = new RegExp(`^\\s*(${number_source})(mm)?\\s*$`)
 
 // maps keyed by svg input never inherit (e.g. "constructor") from Object.prototype
 const own = (fields={}) => Object.assign(Object.create(null), fields)
@@ -59,7 +62,7 @@ const references = {
 // path data commands, and the number of arguments in each of their segments
 const path_commands = {m: 2, l: 2, h: 1, v: 1, c: 6, s: 4, q: 4, t: 2, a: 7, z: 0}
 const path_space = ' \t\n\f\r'
-const path_number_regex = /[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/y
+const path_number_regex = new RegExp(number_source, 'y')
 const path_flag_regex = /[01]/y
 
 // validates path data against the svg path grammar, and returns it with its tokens separated by spaces
@@ -184,10 +187,10 @@ const check_root = (attributes, name) => {
     }
     if (attributes.viewBox === undefined) return
     const raw = attributes.viewBox
-    const parts = raw.trim().split(/\s*,\s*|\s+/)
-    a.assert(parts.length == 4 && parts.every(part => number_regex.test(part)) && parts.map(parseFloat).every(Number.isFinite),
+    const values = raw.trim().split(/\s*,\s*|\s+/).map(part => number_regex.test(part) ? parseFloat(part) : NaN)
+    a.assert(values.length == 4 && values.every(Number.isFinite),
         `Field "viewBox" of SVG outline "${name}" should be four finite numbers, not "${raw}"!`)
-    const [min_x, min_y, width, height] = parts.map(parseFloat)
+    const [min_x, min_y, width, height] = values
     a.assert(min_x === 0 && min_y === 0, `Field "viewBox" of SVG outline "${name}" should start at "0 0", not "${raw}"! ` +
         'Move the drawing to the origin of the page before exporting.')
     a.assert(width > 0 && height > 0, `Field "viewBox" of SVG outline "${name}" should have a positive width and height, not "${raw}"!`)

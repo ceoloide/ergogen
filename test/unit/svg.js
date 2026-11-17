@@ -1,4 +1,5 @@
 const fs = require('fs')
+const child_process = require('child_process')
 const path = require('path')
 const url = require('url')
 const m = require('makerjs')
@@ -238,6 +239,59 @@ describe('SVG', function() {
         invalid('M 0 -1e999', 'the number "-1e999" at offset 4 is not finite')
         invalid('M 0 0 a -1 1 0 0 1 1 1', 'the arc radius "-1" at offset 8 is negative')
         invalid('M 0 0 A 1 -1 0 0 1 1 1', 'the arc radius "-1" at offset 10 is negative')
+    })
+
+    it('number grammar', function() {
+        const root = attributes => svg_lib.extract(doc(`<path d="${square}"/>`, `${ns} ${attributes}`), 'n')
+        // signs, leading and trailing dots, leading zeros, exponents and negative zero
+        for (const attributes of ['width="5."', 'width=".5e1mm"', 'width="+5E0"', 'width=" 05mm "', 'x="-0" y=".0e-5"', 'x="+0." y="0e5"',
+            'width="5" height="5" viewBox="0,0,5.,+.5E+1"', 'viewBox="-0 0. 1e1 10"']) {
+            root(attributes).should.deep.equal([square], attributes)
+        }
+        // numbers without digits, with repeated parts or with exponents without digits
+        for (const [attributes, field] of [['width="."', 'width'], ['width="5..mm"', 'width'], ['width="e5"', 'width'], ['width="1e"', 'width'],
+            ['width="--1"', 'width'], ['width="5 mm"', 'width'], ['height="1e+"', 'height'], ['x="0.0."', 'x'], ['y="0x0"', 'y'],
+            ['viewBox="0 0 5. ."', 'viewBox'], ['viewBox="0 0 .e1 5"', 'viewBox']]) {
+            root.bind(this, attributes).should.throw(`Field "${field}" of SVG outline "n"`)
+        }
+    })
+
+    // svg.extract in its own node process, which is stopped at the deadline (instead of hanging the tests)
+    const isolated = (inputs, args=[]) => {
+        const deadline = 10000
+        const script = `const svg = require(${JSON.stringify(require.resolve('../../src/svg'))})
+            const results = {}
+            for (const [name, text] of Object.entries(JSON.parse(require('fs').readFileSync(0, 'utf8')))) {
+                try {
+                    results[name] = svg.extract(text, name)
+                } catch (ex) {
+                    results[name] = ex.message
+                }
+            }
+            process.stdout.write(JSON.stringify(results))`
+        const result = child_process.spawnSync(process.execPath, [...args, '-e', script],
+            {input: JSON.stringify(inputs), encoding: 'utf8', timeout: deadline, maxBuffer: 2 ** 26})
+        should.equal(result.signal, null, `svg.extract did not finish within ${deadline}ms and the heap limit`)
+        result.status.should.equal(0, result.stderr)
+        return JSON.parse(result.stdout)
+    }
+
+    it('long numbers', function() {
+        // rejecting a long malformed number took quadratic time (about 40s for 100000 digits)
+        const digits = '1'.repeat(100000)
+        const zeros = '0'.repeat(100000)
+        const results = isolated({
+            width: doc(`<path d="${square}"/>`, `${ns} width="${digits}px"`),
+            x: doc(`<path d="${square}"/>`, `${ns} x="${digits}a"`),
+            viewBox: doc(`<path d="${square}"/>`, `${ns} viewBox="0 0 ${digits}a 10"`),
+            path: doc(`<path d="M 0 0 L 1 ${zeros}1x 0 Z"/>`),
+            valid: doc(`<path d="M0 0L${zeros}5 0 0 5Z"/>`, `${ns} x="${zeros}" width="${zeros}5mm" height=" ${zeros}.5e1 " viewBox="0 0 ${zeros}5. 5"`),
+        })
+        results.width.should.have.string('Field "width" of SVG outline "width" should be a positive length in mm')
+        results.x.should.have.string('Field "x" of SVG outline "x" should be 0')
+        results.viewBox.should.have.string('Field "viewBox" of SVG outline "viewBox" should be four finite numbers')
+        results.path.should.equal(`Path 0 for SVG outline "path" has invalid path data, unexpected "x" at offset ${zeros.length + 11}!`)
+        results.valid.should.deep.equal([`M0 0L${zeros}5 0 0 5Z`])
     })
 
     // the same fixtures must give the same results when loaded from a bundle and when built
