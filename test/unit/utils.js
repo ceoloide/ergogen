@@ -206,6 +206,30 @@ describe('Utils', function() {
             ;(await shape({paths: square})).chains.should.equal(1)
         })
 
+        it('curve accuracy', async function() {
+            const curve = async part => {
+                const model = (await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, ...part}]}}, {debug: true})).outlines.o.yaml
+                let paths = 0
+                m.model.walk(model, {onPath: () => paths++})
+                return {paths, bounds: extents(model), length: round(m.measure.modelPathLength(model))}
+            }
+            const cubic = 'M0 0 C0 100 100 100 100 0 Z'
+            const elliptical = 'M0 0 A20 10 0 0 1 40 0 Z'
+            // without an accuracy, curves are approximated just like makerjs does by default
+            for (const paths of [cubic, elliptical]) {
+                let expected = 0
+                m.model.walk(m.importer.fromSVGPathData(paths), {onPath: () => expected++})
+                ;(await curve({paths})).paths.should.equal(expected)
+            }
+            // an explicit accuracy (even as an expression) refines a cubic curve towards its exact bounds and length
+            ;(await curve({paths: cubic, accuracy: 10})).should.deep.equal({paths: 5, bounds: [[-0.092966, -75], [100.017312, 0]], length: 300.108329})
+            ;(await curve({paths: cubic, accuracy: 1})).should.deep.equal({paths: 13, bounds: [[-0.000702, -75], [100, 0]], length: 300.00306})
+            ;(await curve({paths: cubic, accuracy: '1 / 100'})).should.deep.equal({paths: 112, bounds: [[0, -75], [100, 0]], length: 300.000001})
+            // and an elliptical arc as well
+            ;(await curve({paths: elliptical, accuracy: 10})).should.deep.equal({paths: 5, bounds: [[0, 0], [40, 10.005936]], length: 88.449285})
+            ;(await curve({paths: elliptical, accuracy: 0.01})).should.deep.equal({paths: 39, bounds: [[0, 0], [40, 10]], length: 88.44237})
+        })
+
         it('validation without placements', async function() {
             // paths are validated when the part is set up, even when nothing gets placed
             const unplaced = (paths, snippet) => shape({paths, where: false}).should.be.rejectedWith(snippet)
