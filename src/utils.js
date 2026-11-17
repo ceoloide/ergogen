@@ -1,4 +1,6 @@
 const m = require('makerjs')
+const a = require('./assert')
+const svg_lib = require('./svg')
 
 
 exports.deepcopy = value => {
@@ -138,11 +140,10 @@ const satisfies = exports.satisfies = (current, expected) => {
 
 // imports a single path, and validates it before a union could hide its problems
 const import_svg_path = (raw, index, name, accuracy) => {
-    const a = require('./assert')
     a.assert(a.type(raw)() == 'string', `Path ${index} for SVG outline "${name}" must be a string!`)
     a.assert(raw.trim() !== '', `Path ${index} for SVG outline "${name}" cannot be empty!`)
     // malformed path data is rejected before makerjs could misread it, or hang on it
-    const data = require('./svg').path_data(raw, `Path ${index} for SVG outline "${name}"`)
+    const data = svg_lib.path_data(raw, `Path ${index} for SVG outline "${name}"`)
     let model
     try {
         model = m.importer.fromSVGPathData(data, accuracy)
@@ -160,7 +161,6 @@ const import_svg_path = (raw, index, name, accuracy) => {
 }
 
 exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units, accuracy=0.0001) => {
-    const a = require('./assert')
     a.unexpected(config, name, ['accuracy', 'flip_horizontally', 'flip_vertically', 'origin'])
     const actual_accuracy = a.sane(config.accuracy === undefined ? accuracy : config.accuracy, `${name}.accuracy`, 'number')(units)
     a.assert(Number.isFinite(actual_accuracy) && actual_accuracy > 0, `Field "${name}.accuracy" should be a positive finite number!`)
