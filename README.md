@@ -60,8 +60,6 @@ Until there's a proper "Getting started" guide, try getting acquainted with **Er
     - Preview in-development features
     - Use custom modifications
     - Contribute code
-
-    The **CLI** needs Node.js 20.19 or a later 20.x release, 22.12 or a later 22.x release, or Node.js 23 and above (the `engines` range in `package.json`). Earlier 20.x and 22.x releases fail on startup with `ERR_REQUIRE_ESM`.
    
     <br>
 
