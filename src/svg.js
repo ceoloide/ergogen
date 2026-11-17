@@ -2,7 +2,7 @@ const a = require('./assert')
 
 // path extraction for SVG outlines, shared by bundle loading (io.js) and the rollup build
 //
-// only a path-data subset of SVG is supported, without any rendering:
+// this is an importer for the "d" attributes of paths, not an svg renderer, and only a path-data subset of SVG is supported:
 //  - the "d" data of every rendered <path> becomes an outline path, in millimetres
 //  - without a viewBox, one path unit is 1mm, and width/height never rescale paths
 //  - width/height must be positive, either unitless or in mm
@@ -10,11 +10,17 @@ const a = require('./assert')
 //  - comments, foreign (e.g. inkscape) elements and unreferenced defs/clipPath/etc. are ignored
 //  - other visible geometry, transforms, clipping, masking, markers, filters and nested viewports are rejected
 //  - path data has to follow the svg path grammar, and is passed on with its tokens separated
-//  - css (style elements, display, visibility, stroke, fill) never selects or expands paths
-//  - every inline style declaration is checked for the transform, rotate, scale, translate, clip-path, mask,
-//    marker(-start/-mid/-end) and filter properties, without a cascade, and comments, escapes or rule blocks
-//    ("@x{}") in inline styles are rejected, as they could hide a property name or a declaration boundary
+//  - css never selects or expands paths: style elements (stylesheets) are not read at all, so their rules
+//    (transforms included) are ignored, and paths that css or attributes like display, visibility, stroke or fill
+//    would hide are still imported
+//  - every inline style declaration is checked for exactly the transform, rotate, scale, translate, clip-path, mask,
+//    marker(-start/-mid/-end) and filter properties (this list is fixed), without a cascade, and comments, escapes or
+//    rule blocks ("@x{}") in inline styles are rejected, as they could hide a property name or a declaration boundary
 //  - other css properties (like "d", mask-image or offset-path) are not interpreted
+//
+// it reads its input as trusted design data, and is not a sandbox for arbitrary hostile svg:
+//  - nothing is fetched, and no entities are expanded besides the five predefined ones and character references
+//  - the imported path geometry is built by makerjs without any limit on its size, coordinates or curve complexity
 
 const svg_namespace = 'http://www.w3.org/2000/svg'
 
