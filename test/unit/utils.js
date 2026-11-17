@@ -285,6 +285,38 @@ describe('Utils', function() {
             }
         })
 
+        it('degenerate arcs', async function() {
+            // arcs with a zero radius or coinciding endpoints are drawn as lines, so no stray arc remains
+            const outline = async paths => {
+                const results = await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, paths}]}}, {debug: true})
+                const model = results.outlines.o.yaml
+                return {bounds: extents(model), length: round(m.measure.modelPathLength(model)), arcs: results.outlines.o.dxf.includes('\nARC\n')}
+            }
+            const unit = {bounds: [[0, -10], [10, 0]], length: 40, arcs: false}
+            for (const paths of [
+                'M0 0 A0 0 0 0 1 10 0 L10 10 L0 10 Z',
+                'M0 0 a0 0 0 0 1 10 0 l0 10 l-10 0 z',
+                'M0 0 A0 10 0 0 1 10 0 L10 10 L0 10 Z',
+                'M0 0 a10 0 0 0 1 10 0 l0 10 l-10 0 z',
+                'M0 0 A0 0 0 0 1 5 0 5 0 0 0 1 10 0 L10 10 L0 10 Z',
+                'M0 0 L10 0 A5 5 0 0 1 10 0 L10 10 L0 10 Z',
+                'M0 0 L10 0 a5 5 0 0 1 0 0 L10 10 L0 10 Z',
+                'M20 20 L30 20 L30 30 L20 30 Z m-20 -20 l10 0 A5 5 0 0 1 10 0 L10 10 L0 10 Z',
+            ]) {
+                const expected = paths.startsWith('M20') ? {bounds: [[0, -30], [30, 0]], length: 80, arcs: false} : unit
+                ;(await outline(paths)).should.deep.equal(expected, paths)
+            }
+            // a later smooth curve reflects nothing from the replaced arc, just like after an explicit line
+            for (const [degenerate, explicit] of [
+                ['M0 0 C0 5 5 5 5 0 A0 0 0 0 1 10 0 S15 5 20 0 L20 -5 L0 -5 Z', 'M0 0 C0 5 5 5 5 0 L10 0 S15 5 20 0 L20 -5 L0 -5 Z'],
+                ['M0 0 Q5 5 10 0 a5 5 0 0 1 0 0 T20 0 L20 -5 L0 -5 Z', 'M0 0 Q5 5 10 0 l0 0 T20 0 L20 -5 L0 -5 Z'],
+            ]) {
+                ;(await outline(degenerate)).should.deep.equal(await outline(explicit), degenerate)
+            }
+            // proper arcs are kept
+            ;(await outline('M0 0 A5 5 0 0 1 10 0 Z')).should.deep.equal({bounds: [[0, 0], [10, 5]], length: 25.707963, arcs: true})
+        })
+
         it('every path is closed', async function() {
             // loose segments only
             await reject({paths: 'M 0 0 L 10 10'}, 'check failed for path 0')
