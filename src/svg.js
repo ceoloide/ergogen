@@ -43,6 +43,7 @@ const length_regex = new RegExp(`^\\s*(${number_source})(mm)?\\s*$`)
 // maps keyed by svg input never inherit (e.g. "constructor") from Object.prototype
 const own = (fields={}) => Object.assign(Object.create(null), fields)
 const has = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key)
+const no_namespaces = Object.freeze(own())
 
 const entities = own({lt: '<', gt: '>', amp: '&', quot: '"', apos: '\''})
 
@@ -202,6 +203,18 @@ const check_root = (attributes, name) => {
     }
 }
 
+// the namespace bindings of an element: its parent's table, or a copy of it when the element declares namespaces
+// (tables are never changed once made, so most elements share them instead of copying every binding)
+const scope_namespaces = (attributes, inherited) => {
+    let namespaces = inherited
+    for (const [key, val] of Object.entries(attributes)) {
+        if (key != 'xmlns' && !key.startsWith('xmlns:')) continue
+        if (namespaces === inherited) namespaces = own(inherited)
+        namespaces[key == 'xmlns' ? '' : key.slice('xmlns:'.length)] = val
+    }
+    return namespaces
+}
+
 // the namespace of an element name (`undefined` means an unprefixed name without a default namespace)
 const namespace_of = (qname, namespaces, name) => {
     const colon = qname.indexOf(':')
@@ -224,11 +237,7 @@ exports.extract = (text, name) => {
     // the geometry-relevant state of an element, given its parent's state
     const visit = (qname, attributes) => {
         const parent = stack[stack.length - 1]
-        const namespaces = own(parent ? parent.namespaces : {})
-        for (const [key, val] of Object.entries(attributes)) {
-            if (key == 'xmlns') namespaces[''] = val
-            else if (key.startsWith('xmlns:')) namespaces[key.slice('xmlns:'.length)] = val
-        }
+        const namespaces = scope_namespaces(attributes, parent ? parent.namespaces : no_namespaces)
         const frame = {qname, namespaces, ignored: false, transformed: undefined}
         const namespace = namespace_of(qname, namespaces, name)
         const local = qname.slice(qname.indexOf(':') + 1)

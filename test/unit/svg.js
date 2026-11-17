@@ -19,6 +19,7 @@ describe('SVG', function() {
     const far_square = 'M 100 0 L 110 0 L 110 10 L 100 10 Z'
     const doc = (body, attributes=ns) => `<svg ${attributes}>${body}</svg>`
     const fixture_svg = path.join(__dirname, '..', 'fixtures', 'bundle', 'outlines', 'outline_injected_svg.svg')
+    const svg_ns = 'http://www.w3.org/2000/svg'
 
     const round = val => Number(val.toFixed(6)) + 0 // also turns -0 into 0
     const measure = model => {
@@ -87,6 +88,12 @@ describe('SVG', function() {
         'repeated horizontal and vertical lines': [doc('<path d="M0 0H5 10V5 10H0Z"/>'), unit_square],
         'repeated relative horizontal and vertical lines': [doc('<path d="M0 0h5 5v5 5h-5 -5z"/>'), unit_square],
         'repeated backwards relative line': [doc('<path d="M0 0h-2 12v10h-10z"/>'), {low: [-2, -10], high: [10, 0], chains: 1}],
+        'default namespace restored after a foreign group': [doc(`<g xmlns="urn:other"><path d="${far_square}"/></g><path d="${square}"/>`), unit_square],
+        'svg namespace inside a foreign group': [doc(`<g xmlns="urn:other"><g xmlns="${svg_ns}"><path d="${far_square}"/></g></g><path d="${square}"/>`), unit_square],
+        'rebound prefix': [`<svg ${ns} xmlns:s="urn:other"><s:path d="${far_square}"/><g xmlns:s="${svg_ns}"><s:path d="${square}"/></g>` +
+            `<s:path d="${far_square}"/></svg>`, unit_square],
+        'several prefixes on a group': [doc(`<g xmlns:x="urn:other" xmlns:y="${svg_ns}"><x:path d="${far_square}"/><y:path d="${square}"/></g>`), unit_square],
+        'inherited prefix name': [`<svg ${ns} xmlns:__proto__="urn:other"><__proto__:g><path d="${far_square}"/></__proto__:g><path d="${square}"/></svg>`, unit_square],
     }
 
     const rejected = {
@@ -137,6 +144,10 @@ describe('SVG', function() {
         'misplaced doctype': [doc('') + '<!DOCTYPE svg>', 'misplaced DOCTYPE'],
         'inherited entity': [doc(`<path id="&constructor;" d="${square}"/>`), 'unknown entity "&constructor;"'],
         'inherited prefix': [doc('<constructor:g/>'), 'undeclared namespace prefix "constructor"'],
+        'inherited prefix without any namespaces': ['<svg><__proto__:g/></svg>', 'undeclared namespace prefix "__proto__"'],
+        'prefix of a sibling': [doc(`<g xmlns:x="${svg_ns}"><x:path d="${square}"/></g><x:g/>`), 'undeclared namespace prefix "x"'],
+        'prefix of a child': [doc(`<g><x:g xmlns:x="${svg_ns}"/><x:g/></g>`), 'undeclared namespace prefix "x"'],
+        'undeclared prefix in a foreign group': [doc('<f:g xmlns:f="urn:other"><x:g/></f:g>'), 'undeclared namespace prefix "x"'],
         'marker reference': [doc(`<defs><marker id="m"><circle r="10"/></marker></defs><path marker-end="url(#m)" d="M0 0L1 0L1 1Z"/>`),
             'uses "marker-end" on <path>, markers are not supported! Convert the markers to paths'],
         'inherited css marker': [doc(`<g style="marker-start: url(#m)"><path d="${square}"/></g>`), 'uses "marker-start" on <g>'],
@@ -292,6 +303,20 @@ describe('SVG', function() {
         results.viewBox.should.have.string('Field "viewBox" of SVG outline "viewBox" should be four finite numbers')
         results.path.should.equal(`Path 0 for SVG outline "path" has invalid path data, unexpected "x" at offset ${zeros.length + 11}!`)
         results.valid.should.deep.equal([`M0 0L${zeros}5 0 0 5Z`])
+    })
+
+    it('deeply nested namespaces', function() {
+        // every element copied all of its parent's namespace bindings, which took time and memory proportional to
+        // the depth times the number of bindings (here well beyond the heap limit of the process)
+        const depth = 20000
+        const bindings = Array.from({length: 1000}, (_, i) => `xmlns:p${i}="urn:p${i}"`).join(' ')
+        isolated({
+            nested: `<svg ${ns} ${bindings}>${'<g>'.repeat(depth)}<path d="${square}"/><p999:g/>${'</g>'.repeat(depth)}</svg>`,
+            undeclared: `<svg ${ns} ${bindings}>${'<g>'.repeat(depth)}<p1000:g/>${'</g>'.repeat(depth)}</svg>`,
+        }, ['--max-old-space-size=128']).should.deep.equal({
+            nested: [square],
+            undeclared: 'SVG outline "undeclared" uses the undeclared namespace prefix "p1000"!',
+        })
     })
 
     // the same fixtures must give the same results when loaded from a bundle and when built
