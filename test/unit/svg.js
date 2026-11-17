@@ -245,8 +245,25 @@ describe('SVG', function() {
         valid('M1 2L3 4L5 2ZA5 5 0 0 1 1 2', 'M 1 2 L 3 4 L 5 2 Z L 1 2')
         valid('M1 1h4v4zm2 2A5 5 0 0 1 3 3', 'M 1 1 h 4 v 4 z m 2 2 L 3 3')
         valid('M1 1 5 5zA5 5 0 0 1 1 1', 'M 1 1 5 5 z L 1 1')
-        // nearby, but distinct, endpoints keep their arc
-        valid('M0 0A5 5 0 0 1 0 1e-9', 'M 0 0 A 5 5 0 0 1 0 1e-9')
+        // arcs between nearly, but not exactly, coinciding endpoints are rejected, small or large, absolute or relative
+        const near = (data, end, letter, offset) => svg_lib.path_data.bind(this, data, 'P')
+            .should.throw(`P has an arc to "${end}" in the command "${letter}" at offset ${offset}, whose endpoints nearly coincide, which is not supported!`)
+        near('M0 0A5 5 0 0 1 0 1e-9', '0 1e-9', 'A', 4)
+        near('M0 0A5 5 0 1 1 1e-9 0', '1e-9 0', 'A', 4)
+        near('M0 0a5 5 0 0 1 1e-12 0', '1e-12 0', 'a', 4)
+        near('M0 0a5 5 0 0 1 10 0 5 5 0 1 1 1e-12 0', '1e-12 0', 'a', 4)
+        // including the float drift of an absolute endpoint after relative moves (0.1 + 0.2 is not 0.3)
+        near('M0.1 0h0.2A5 5 0 0 1 0.3 0', '0.3 0', 'A', 10)
+        near('M0.1 0h0.2A5 5 0 1 1 0.3 0', '0.3 0', 'A', 10)
+        // up to the 0.0001 that makerjs cannot tell apart, measured after undoing the rotation and the ellipse ratio
+        near('M0 0A5 5 0 1 1 0.0001 0', '0.0001 0', 'A', 4)
+        valid('M0 0A5 5 0 1 1 0.000101 0', 'M 0 0 A 5 5 0 1 1 0.000101 0')
+        valid('M0 0A1 20 0 1 1 0.001 0', 'M 0 0 A 1 20 0 1 1 0.001 0')
+        near('M0 0A1 20 0 1 1 0 0.001', '0 0.001', 'A', 4)
+        near('M0 0A1 20 90 1 1 0.001 0', '0.001 0', 'A', 4)
+        // unless the radius is too small to span them, so that the arc is a half circle between them
+        valid('M0 0A2e-5 2e-5 0 0 1 4e-5 0', 'M 0 0 A 0.00002 0.00002 0 0 1 0.00004 0')
+        near('M0 0A3e-5 3e-5 0 0 1 4e-5 0', '0.00004 0', 'A', 4)
         // empty, or not starting with a moveto
         invalid('', 'it should start with a moveto ("M" or "m")')
         invalid(' ', 'it should start with a moveto ("M" or "m")')

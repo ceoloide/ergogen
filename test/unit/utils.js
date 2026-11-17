@@ -313,8 +313,12 @@ describe('Utils', function() {
             ]) {
                 ;(await outline(degenerate)).should.deep.equal(await outline(explicit), degenerate)
             }
-            // proper arcs are kept
+            // proper arcs are kept, even nearly full ones
             ;(await outline('M0 0 A5 5 0 0 1 10 0 Z')).should.deep.equal({bounds: [[0, 0], [10, 5]], length: 25.707963, arcs: true})
+            ;(await outline('M0 0 A5 5 0 1 1 0.01 0 Z')).should.deep.equal({bounds: [[-4.995, 0], [5.005, 9.999997]], length: 31.415927, arcs: true})
+            // while nearly coinciding endpoints fail, instead of leaving a stray arc or a misplaced circle
+            await reject({paths: 'M0 0 L10 0 A5 5 0 0 1 10 1e-9 L10 10 L0 10 Z'}, 'Path 0 for SVG outline "outlines.o.0" has an arc to "10 1e-9"')
+            await reject({paths: 'M0.1 0 h0.2 A5 5 0 1 1 0.3 0 L10 0 L10 10 L0.1 10 Z'}, 'whose endpoints nearly coincide')
         })
 
         it('every path is closed', async function() {
