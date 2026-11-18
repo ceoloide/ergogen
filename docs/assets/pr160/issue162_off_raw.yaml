@@ -1,0 +1,128 @@
+meta:
+  engine: 4.1.0
+units:
+  kx: cx
+  ky: cy
+  px: kx + 2
+  py: ky + 2
+points:
+  zones:
+    matrix:
+      anchor:
+        rotate: 20
+      columns:
+        pinky:
+        ring:
+        middle:
+          key.stagger: 5
+        index:
+          key.stagger: 5
+        inner:
+          key.stagger: -6
+        trans:
+          key.stagger: -2
+      rows:
+        bottom:
+        home:
+        top:
+    thumbfan:
+      anchor:
+        rotate: 20
+      columns:
+        M1:
+        M2:
+        M3:
+          key.stagger: 0.275kx
+      rows:
+        cluster:
+          shift: [ 0, -1.05kx ]
+    thumbfan2:
+      anchor:
+        ref: matrix_inner_bottom
+        shift: [-7, -25]
+      columns:
+        near:
+        home:
+          key.spread: 21.25
+          key.splay: -20
+          key.origin: [-11.75, -9]
+        far:
+          key.spread: 21.25
+          key.splay: -20
+          key.origin: [2, -12]
+          key.height: 1.5kx
+      rows:
+        thumb:
+          
+  rotate: -20
+  mirror:
+    ref: matrix_pinky_home
+    distance: 270.7529778
+
+outlines:
+  _hull:
+    - what: hull
+      points:
+        - ref: matrix_pinky_top
+        - ref: matrix_pinky_home
+        - ref: matrix_pinky_bottom
+        - ref: matrix_ring_top
+        - ref: matrix_ring_home
+        - ref: matrix_ring_bottom
+        - ref: matrix_middle_top
+        - ref: matrix_middle_home
+        - ref: matrix_middle_bottom
+        - ref: matrix_index_top
+        - ref: matrix_index_home
+        - ref: matrix_index_bottom
+        - ref: matrix_inner_top
+        - ref: matrix_inner_home
+        - ref: matrix_inner_bottom
+        - ref: matrix_trans_top
+        - ref: matrix_trans_home
+        - ref: matrix_trans_bottom
+        - ref: thumbfan_M1_cluster
+        - ref: thumbfan_M2_cluster
+        - ref: thumbfan_M3_cluster
+        - ref: thumbfan2_near_thumb
+        - ref: thumbfan2_home_thumb
+        - ref: thumbfan2_far_thumb
+        - ref: mirror_matrix_pinky_top
+        - ref: mirror_matrix_pinky_home
+        - ref: mirror_matrix_pinky_bottom
+        - ref: mirror_matrix_ring_top
+        - ref: mirror_matrix_ring_home
+        - ref: mirror_matrix_ring_bottom
+        - ref: mirror_matrix_middle_top
+        - ref: mirror_matrix_middle_home
+        - ref: mirror_matrix_middle_bottom
+        - ref: mirror_matrix_index_top
+        - ref: mirror_matrix_index_home
+        - ref: mirror_matrix_index_bottom
+        - ref: mirror_matrix_inner_top
+        - ref: mirror_matrix_inner_home
+        - ref: mirror_matrix_inner_bottom
+        - ref: mirror_matrix_trans_top
+        - ref: mirror_matrix_trans_home
+        - ref: mirror_matrix_trans_bottom
+        - ref: mirror_thumbfan_M1_cluster
+        - ref: mirror_thumbfan_M2_cluster
+        - ref: mirror_thumbfan_M3_cluster
+        - ref: mirror_thumbfan2_near_thumb
+        - ref: mirror_thumbfan2_home_thumb
+        - ref: mirror_thumbfan2_far_thumb
+      concavity: 40
+      symmetric: false
+  preview:
+    - what: outline
+      name: _hull
+    - what: rectangle
+      where: -/thumbfan2_far_thumb/
+      size: 18
+      fillet: 1.5
+      operation: stack
+    - what: rectangle
+      where: /thumbfan2_far_thumb/
+      size: [18,18*1.5]
+      fillet: 1.5
+      operation: stack

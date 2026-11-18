@@ -1,0 +1,115 @@
+[
+ {
+  "name": "hull-symmetric",
+  "scale": 2.2,
+  "panels": [
+   {
+    "title": "develop (hull 1.0.12)",
+    "root": "base",
+    "config_root": "tools",
+    "config": "issue162_raw.yaml",
+    "outlines": [
+     "_hull"
+    ],
+    "axis_ref": "matrix_pinky_home"
+   },
+   {
+    "title": "4.3.0 default (symmetric: true)",
+    "root": "head",
+    "config_root": "tools",
+    "config": "issue162_raw.yaml",
+    "outlines": [
+     "_hull"
+    ],
+    "axis_ref": "matrix_pinky_home"
+   },
+   {
+    "title": "4.3.0 symmetric: false",
+    "root": "head",
+    "config_root": "tools",
+    "config": "issue162_off_raw.yaml",
+    "outlines": [
+     "_hull"
+    ],
+    "axis_ref": "matrix_pinky_home"
+   }
+  ]
+ },
+ {
+  "name": "asym-clone",
+  "scale": 3,
+  "panels": [
+   {
+    "title": "develop: where /matrix/, asym: clone",
+    "root": "base",
+    "config_root": "head",
+    "config": "test/outlines/asym_filter.yaml",
+    "outlines": [
+     "clone-regex"
+    ]
+   },
+   {
+    "title": "4.3.0: same config",
+    "root": "head",
+    "config": "test/outlines/asym_filter.yaml",
+    "outlines": [
+     "clone-regex"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "solvers",
+  "scale": 3,
+  "panels": [
+   {
+    "title": "gusset (triangle_sss)",
+    "root": "head",
+    "config": "test/outlines/solvers.yaml",
+    "outlines": [
+     "gusset"
+    ]
+   },
+   {
+    "title": "notch (triangle_asa)",
+    "root": "head",
+    "config": "test/outlines/solvers.yaml",
+    "outlines": [
+     "notch"
+    ],
+    "points": false
+   },
+   {
+    "title": "thumb-keys (splay from triangle_sss)",
+    "root": "head",
+    "config": "test/outlines/solvers.yaml",
+    "outlines": [
+     "thumb-keys"
+    ]
+   }
+  ]
+ },
+ {
+  "name": "svg-outlines",
+  "scale": 5,
+  "panels": [
+   {
+    "title": "what: svg (inline path)",
+    "root": "head",
+    "config": "test/outlines/svg.yaml",
+    "outlines": [
+     "svg-path-mirror"
+    ]
+   },
+   {
+    "title": "what: choc_hotswap_socket",
+    "root": "head",
+    "config_root": "tools",
+    "config": "sockets.yaml",
+    "outlines": [
+     "sockets"
+    ]
+   }
+  ]
+ }
+]

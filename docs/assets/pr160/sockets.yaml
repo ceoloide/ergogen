@@ -1,0 +1,13 @@
+points:
+  zones.matrix:
+    columns:
+      pinky:
+      ring:
+    rows:
+      bottom:
+      top:
+  mirror.distance: 60
+outlines:
+  sockets:
+    - what: choc_hotswap_socket
+      where: true
