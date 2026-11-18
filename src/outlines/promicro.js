@@ -5,7 +5,12 @@ const pins = () => {
     const result = []
     for (let i = 0; i < 12; i++) {
         const x = -13.97 + i * 2.54
-        result.push(u.svg_circle(x, -7.62, 0.55), u.svg_circle(x, 7.62, 0.55))
+        const left = x - 0.55
+        const right = x + 0.55
+        result.push(
+            `M ${right} -7.62 A 0.55 0.55 0 1 0 ${left} -7.62 A 0.55 0.55 0 1 0 ${right} -7.62 Z`,
+            `M ${right} 7.62 A 0.55 0.55 0 1 0 ${left} 7.62 A 0.55 0.55 0 1 0 ${right} 7.62 Z`
+        )
     }
     return result
 }

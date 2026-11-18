@@ -12,8 +12,8 @@ module.exports = (config, name, points, outlines, units) => {
         'M 0.6 3 L 1.4 3 L 1.4 5.2 L 0.6 5.2 Z',
         // the recess at the back of the housing, around the two pins
         'M -2.25 -1.35 L 2.25 -1.35 L 2.25 0.25 L -2.25 0.25 Z',
-        u.svg_circle(-1, 0, 0.2),
-        u.svg_circle(1, 0, 0.2)
+        'M -0.8 0 A 0.2 0.2 0 1 0 -1.2 0 A 0.2 0.2 0 1 0 -0.8 0 Z',
+        'M 1.2 0 A 0.2 0.2 0 1 0 0.8 0 A 0.2 0.2 0 1 0 1.2 0 Z'
     ].join(' ')]
     return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
 }

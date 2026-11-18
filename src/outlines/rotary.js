@@ -24,7 +24,7 @@ module.exports = (config, name, points, outlines, units) => {
         // the body under the knob
         'M -6.12 -4.74 L -5.12 -5.84 L 5.88 -5.84 L 5.88 5.76 L -6.12 5.76 Z',
         // a small circle near the rim marks the direction of the knob, at 1 o'clock (7.4mm from the center)
-        u.svg_circle(3.58, -6.449, 0.5)
+        'M 4.08 -6.449 A 0.5 0.5 0 1 0 3.08 -6.449 A 0.5 0.5 0 1 0 4.08 -6.449 Z'
     ].join(' ')]
     return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
 }

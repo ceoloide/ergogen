@@ -10,13 +10,13 @@ module.exports = (config, name, points, outlines, units) => {
         // the barrel that the plug enters from the north
         'M -5.1 -2 L 0.5 -2 L 0.5 0 L -5.1 0 Z',
         // the four pins
-        u.svg_circle(-4.6, 11.3, 0.45),
-        u.svg_circle(0, 10.2, 0.45),
-        u.svg_circle(0, 6.2, 0.45),
-        u.svg_circle(0, 3.2, 0.45),
+        'M -4.15 11.3 A 0.45 0.45 0 1 0 -5.05 11.3 A 0.45 0.45 0 1 0 -4.15 11.3 Z',
+        'M 0.45 10.2 A 0.45 0.45 0 1 0 -0.45 10.2 A 0.45 0.45 0 1 0 0.45 10.2 Z',
+        'M 0.45 6.2 A 0.45 0.45 0 1 0 -0.45 6.2 A 0.45 0.45 0 1 0 0.45 6.2 Z',
+        'M 0.45 3.2 A 0.45 0.45 0 1 0 -0.45 3.2 A 0.45 0.45 0 1 0 0.45 3.2 Z',
         // the two locating pegs
-        u.svg_circle(-2.3, 8.6, 0.75),
-        u.svg_circle(-2.3, 1.6, 0.75)
+        'M -1.55 8.6 A 0.75 0.75 0 1 0 -3.05 8.6 A 0.75 0.75 0 1 0 -1.55 8.6 Z',
+        'M -1.55 1.6 A 0.75 0.75 0 1 0 -3.05 1.6 A 0.75 0.75 0 1 0 -1.55 1.6 Z'
     ].join(' ')]
     return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
 }

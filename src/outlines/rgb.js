@@ -8,7 +8,7 @@ module.exports = (config, name, points, outlines, units) => {
         // the package
         'M -2.5 -2.5 L 2.5 -2.5 L 2.5 2.5 L -2.5 2.5 Z',
         // the round lens
-        u.svg_circle(0, 0, 2)
+        'M 2 0 A 2 2 0 1 0 -2 0 A 2 2 0 1 0 2 0 Z'
     ].join(' ')]
     return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
 }

@@ -13,10 +13,10 @@ module.exports = (config, name, points, outlines, units) => {
         // the visible area of the display
         'M -26.24 4.24 L -3.86 4.24 L -3.86 9.76 L -26.24 9.76 Z',
         // the four pins
-        u.svg_circle(1.6, 2.18, 0.5),
-        u.svg_circle(1.6, 4.72, 0.5),
-        u.svg_circle(1.6, 7.26, 0.5),
-        u.svg_circle(1.6, 9.8, 0.5)
+        'M 2.1 2.18 A 0.5 0.5 0 1 0 1.1 2.18 A 0.5 0.5 0 1 0 2.1 2.18 Z',
+        'M 2.1 4.72 A 0.5 0.5 0 1 0 1.1 4.72 A 0.5 0.5 0 1 0 2.1 4.72 Z',
+        'M 2.1 7.26 A 0.5 0.5 0 1 0 1.1 7.26 A 0.5 0.5 0 1 0 2.1 7.26 Z',
+        'M 2.1 9.8 A 0.5 0.5 0 1 0 1.1 9.8 A 0.5 0.5 0 1 0 2.1 9.8 Z'
     ].join(' ')]
     return u.svg_paths_to_outline(paths, config, name, points, outlines, units)
 }
