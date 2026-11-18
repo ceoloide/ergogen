@@ -139,6 +139,11 @@ const satisfies = exports.satisfies = (current, expected) => {
 }
 
 // imports a single path, and validates it before a union could hide its problems
+// a closed svg path for a circle, to draw round details in the built-in outlines
+exports.svg_circle = (x, y, r) => {
+    return `M ${x + r} ${y} A ${r} ${r} 0 1 0 ${x - r} ${y} A ${r} ${r} 0 1 0 ${x + r} ${y} Z`
+}
+
 const import_svg_path = (raw, index, name, options) => {
     a.assert(a.type(raw)() == 'string', `Path ${index} for SVG outline "${name}" must be a string!`)
     a.assert(raw.trim() !== '', `Path ${index} for SVG outline "${name}" cannot be empty!`)
