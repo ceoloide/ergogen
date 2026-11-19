@@ -14,7 +14,8 @@ describe('Outline geometry', function() {
         return [low.map(round), high.map(round), m.model.findChains(outline.yaml).length, digest]
     }
     const measured = async (parts, config={}) => {
-        const outlines = Object.fromEntries(Object.entries(parts).map(([name, part]) => [name, [{where: true, ...part}]]))
+        // a single part is placed everywhere by default, while a list of parts is taken as it is
+        const outlines = Object.fromEntries(Object.entries(parts).map(([name, part]) => [name, Array.isArray(part) ? part : [{where: true, ...part}]]))
         const results = await ergogen.process({points: {zones: {matrix: null}}, ...config, outlines}, {debug: true})
         return Object.fromEntries(Object.entries(results.outlines).map(([name, outline]) => [name, measure(outline)]))
     }
@@ -63,5 +64,53 @@ describe('Outline geometry', function() {
         clones.list.should.deep.equal([[122, -9], [172.728, 22.728], 2, '732072edc2a8'])
         clones.regex.should.deep.equal(clones.list)
         clones.all.should.deep.equal(clones.list)
+    })
+
+    it('trigonometry solvers', async function() {
+        const units = {base: 60, left: 45, right: 35, notch: 30, pitch: 21, radius: 80, step: 'triangle_sss(pitch, radius, radius)'}
+        // thumb keys 21mm apart on an 80mm radius, so that neighbouring key centers are exactly one pitch apart
+        const thumb = {
+            anchor: {shift: [0, -40]},
+            key: {spread: 0, origin: [0, '-radius']},
+            columns: {inner: null, home: {key: {splay: '-step'}}, outer: {key: {splay: '-step'}}}
+        }
+        const solved = await measured({
+            // a triangle with all three sides known, mirrored to the other half
+            // (it turns back along the base, then opens up by the angle opposite the left side)
+            gusset: {what: 'polygon', where: 'matrix', asym: 'both', points: [
+                {shift: [0, 0]}, {shift: ['base', 0]}, {orient: '180 - triangle_sss(left, right, base)', shift: ['right', 0]}
+            ]},
+            // an isosceles notch with 75 degree base angles
+            notch: {what: 'polygon', where: 'matrix', points: [
+                {shift: [0, 0]}, {shift: ['notch', 0]}, {orient: 105, shift: ['triangle_asa(75, notch, 75)', 0]}
+            ]},
+            thumb: {what: 'rectangle', where: '/thumb/', size: 18},
+        }, {units, points: {zones: {matrix: null, thumb}, mirror: {distance: 200}}})
+        solved.should.deep.equal({
+            gusset: [[0, 0], [200, 26.087], 2, 'a28c735b04f0'],
+            notch: [[0, 0], [30, 55.981], 1, 'd3b9f692f035'],
+            thumb: [[-9, -63.139], [209, -31], 6, '21210378db94'],
+        })
+    })
+
+    it('svg placement', async function() {
+        const reference = {what: 'outline', name: 'reference', operation: 'stack'}
+        const corner = 'M 0 0 L 0 -2.5 L -2.5 -2.5 L -2.5 0 Z'
+        const wedge = 'M 0 0 L 0 -2.5 L -2.5 -2.5 L -2.5 5 Z'
+        const placed = await measured({
+            reference: {what: 'rectangle', size: 20},
+            // several paths on the source half only
+            multiple: [{what: 'svg', where: 'matrix', paths: [corner, 'M 5 5 L 10 5 L 10 10 L 5 10 Z']}, reference],
+            // an asymmetric path is mirrored on the mirrored half
+            mirror: [{what: 'svg', where: true, paths: wedge}, reference],
+            // flipped both ways around an offset origin, then placed on both halves
+            flip: [{what: 'svg', where: true, flip_vertically: true, flip_horizontally: true, origin: [-10, -10], paths: wedge}, reference],
+        }, {points: {zones: {matrix: null}, mirror: {distance: 40}}})
+        delete placed.reference
+        placed.should.deep.equal({
+            multiple: [[-10, -10], [50, 10], 4, '98188dbf77b2'],
+            mirror: [[-10, -10], [50, 10], 4, '1d8d6bccceed'],
+            flip: [[-10, -12.5], [50, 10], 2, '262bc8c5b9f1'],
+        })
     })
 })

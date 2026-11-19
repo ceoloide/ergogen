@@ -252,6 +252,13 @@ describe('SVG', function() {
         invalid('M 0 0 A 1 1 0 0 1 1', 'the command "A" at offset 6 takes 7 arguments per segment, not 6')
         invalid('M 0 0 A 1 1 0 2 1 1 1', 'the command "A" at offset 6 takes 7 arguments per segment, not 3')
         invalid('M 0 0 V', 'the command "V" at offset 6 takes 1 argument per segment, not 0')
+        invalid('M 0 0 C 1 1 2 2', 'the command "C" at offset 6 takes 6 arguments per segment, not 4')
+        invalid('M 0 0 Q 1 1', 'the command "Q" at offset 6 takes 4 arguments per segment, not 2')
+        invalid('M 0 0 S 1 1', 'the command "S" at offset 6 takes 4 arguments per segment, not 2')
+        invalid('M 0 0 T 1', 'the command "T" at offset 6 takes 2 arguments per segment, not 1')
+        invalid('M 0 0 L 10 0 L 10 10 L 0 Z', 'the command "L" at offset 21 takes 2 arguments per segment, not 1')
+        invalid('M 0 0 H 10 V 10 H Z', 'the command "H" at offset 16 takes 1 argument per segment, not 0')
+        invalid('M 0 L 10 0 L 10 10 Z', 'the command "M" at offset 0 takes 2 arguments per segment, not 1')
         // numbers
         invalid('M 0 -1e999', 'the number "-1e999" at offset 4 is not finite')
         invalid('M 0 0 a -1 1 0 0 1 1 1', 'the arc radius "-1" at offset 8 is negative')

@@ -187,19 +187,6 @@ describe('Utils', function() {
             return {bounds: extents(model), chains: m.model.findChains(model).length}
         }
         const reject = (part, snippet) => shape(part).should.be.rejectedWith(snippet)
-        const malformed = [
-            ['M 0 0 C 1 1 2 2', 'Path 0 for SVG outline "outlines.o.0" has invalid path data, the command "C" at offset 6 takes 6 arguments per segment, not 4'],
-            ['M 0 0 Q 1 1', 'the command "Q" at offset 6 takes 4 arguments per segment, not 2'],
-            ['M 0 0 S 1 1', 'the command "S" at offset 6 takes 4 arguments per segment, not 2'],
-            ['M 0 0 T 1', 'the command "T" at offset 6 takes 2 arguments per segment, not 1'],
-            ['M 0 0 L 10 0 L 10 10 L 4 Z', 'the command "L" at offset 21 takes 2 arguments per segment, not 1'],
-            ['M 0 0 L 10 0 L 10 10 L 0 Z', 'the command "L" at offset 21 takes 2 arguments per segment, not 1'],
-            ['M 0 0 H 10 V 10 H Z', 'the command "H" at offset 16 takes 1 argument per segment, not 0'],
-            ['M 0 L 10 0 L 10 10 Z', 'the command "M" at offset 0 takes 2 arguments per segment, not 1'],
-            ['M 0 0 L 1e999 0 L 0 10 Z', 'the number "1e999" at offset 8 is not finite'],
-            [[square, `${square} X`], 'Path 1 for SVG outline "outlines.o.0" has invalid path data, unexpected "X" at offset 30'],
-            [`${square} R 1 2`, 'unexpected "R" at offset 30'],
-        ]
 
         it('accuracy', async function() {
             // only a missing accuracy gets the default, and it has to be positive and finite
@@ -246,10 +233,8 @@ describe('Utils', function() {
             await unplaced('M 0 0 L 10 0 L 10 10', 'SVG paths need to be closed shapes (check failed for path 0 of "outlines.o.0")')
             await unplaced([], 'SVG outline "outlines.o.0" must have at least one path!')
             await unplaced(12, 'must be a string or an array')
-            // malformed path data is rejected before makerjs could misread it (or hang on it)
-            for (const [paths, snippet] of malformed) {
-                await unplaced(paths, snippet)
-            }
+            // malformed path data is rejected before makerjs could misread it (or hang on it), in any of the paths
+            await unplaced([square, `${square} X`], 'Path 1 for SVG outline "outlines.o.0" has invalid path data, unexpected "X" at offset 30')
             // valid paths without placements produce nothing
             ;(await svg_outline({paths: square, where: false})).yaml.models.export.models.should.deep.equal({})
         })
