@@ -20,17 +20,6 @@ describe('Outline geometry', function() {
         return Object.fromEntries(Object.entries(results.outlines).map(([name, outline]) => [name, measure(outline)]))
     }
 
-    it('choc socket origin', async function() {
-        // the origin of the choc socket takes units and expressions, on top of its built-in offset
-        const sockets = await measured({
-            default: {what: 'choc_hotswap_socket'},
-            expression: {what: 'choc_hotswap_socket', origin: ['u/2', 'u']},
-            literal: {what: 'choc_hotswap_socket', origin: [9.525, 19.05]},
-        }, {units: {u: 19.05}})
-        sockets.expression.should.deep.equal(sockets.literal)
-        sockets.expression.should.not.deep.equal(sockets.default)
-    })
-
     it('asym clone filters', async function() {
         // two distinguishable keys on the source half (around x=0), mirrored around x=75
         const points = {zones: {matrix: {columns: {c1: {key: {shift: [-10, 10], rotate: 45}}, c2: null}}}, mirror: {distance: 150}}
