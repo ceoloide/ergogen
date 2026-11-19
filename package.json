@@ -18,6 +18,7 @@
         "coverage": "nyc --reporter=html --reporter=text npm test"
     },
     "dependencies": {
+        "ajv": "^8.20.0",
         "fs-extra": "^11.3.2",
         "hull": "github:ceoloide/hull#4a8a9147f9f4fcbaf0c8a91a4e8f1b6092b2ca18",
         "js-yaml": "^4.2.0",

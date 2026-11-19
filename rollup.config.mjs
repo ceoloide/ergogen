@@ -31,7 +31,7 @@ export const svg_outline_plugin = () => {
 
 export default {
   input: 'src/ergogen.js',
-  external: ['makerjs', 'js-yaml', 'mathjs', 'kle-serial', 'jszip', 'hull'],
+  external: ['makerjs', 'js-yaml', 'mathjs', 'kle-serial', 'jszip', 'hull', 'ajv'],
   output: {
     name: 'ergogen',
     file: 'dist/ergogen.js',
@@ -43,7 +43,8 @@ export default {
       'mathjs': 'math',
       'kle-serial': 'kle',
       'jszip': 'jszip',
-      'hull': 'hull'
+      'hull': 'hull',
+      'ajv': 'ajv7'
     }
   },
   plugins: [

@@ -305,3 +305,6 @@ const resolve = (val, root, breadcrumbs, seen = new Set()) => {
 exports.concat = config => traverse(config, config, [], (target, key, val, root, breadcrumbs) => {
     target[key] = resolve(val, root, breadcrumbs)
 })
+
+// the preprocessing steps, in the order the engine applies them
+exports.steps = ['unnest', 'inherit', 'parameterize', 'concat']

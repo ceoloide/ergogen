@@ -6,6 +6,7 @@ const points_lib = require('./points')
 const outlines_lib = require('./outlines')
 const cases_lib = require('./cases')
 const pcbs_lib = require('./pcbs')
+const verify_lib = require('./verify')
 
 const version = require('../package.json').version
 
@@ -25,10 +26,9 @@ const process = async (raw, options={}, logger=()=>{}) => {
     logger(prefix + suffix)
     
     logger('Preprocessing input...')
-    config = prepare.unnest(config)
-    config = prepare.inherit(config)
-    config = prepare.parameterize(config)
-    config = prepare.concat(config)
+    for (const step of prepare.steps) {
+        config = prepare[step](config)
+    }
     const results = {}
     if (debug) {
         results.raw = raw
@@ -117,5 +117,6 @@ const inject = (type, name, value) => {
 module.exports = {
     version,
     process,
+    verify: verify_lib.verify,
     inject
 }
