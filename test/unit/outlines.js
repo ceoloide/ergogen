@@ -23,9 +23,14 @@ describe('Outline geometry', function() {
     it('built-in shapes', async function() {
         // each outline matches the built-in footprint of the same name, seen from the top
         // (the logo is a decoration without a footprint, and details like the rotary knob stay separate chains)
+        // the switches are drawn as seen from the top, too, centered on their point
         const expected = {
+            alps: [[-7.75, -6.4], [7.75, 6.4], 4, '44a534fdcc43'],
+            choc_v1: [[-7.5, -7.5], [7.5, 7.5], 5, '606be71f692e'],
+            choc_v2: [[-7.5, -7.5], [7.5, 7.5], 4, 'a99d6a203d4f'],
             ergogen_logo: [[-7.5, -4.529], [7.5, 4.529], 3, '3652642f2e77'],
             jstph: [[-2.95, -6.25], [2.95, 1.35], 6, 'e069054a114e'],
+            mx: [[-7.8, -7.8], [7.8, 7.8], 4, '70ca9f79dbf7'],
             oled: [[-34.8, -11.99], [3.2, 0.01], 6, 'e329e22044e0'],
             promicro: [[-19.304, -8.89], [15.24, 8.89], 26, '163021a80477'],
             rgb: [[-2.5, -2.5], [2.5, 2.5], 2, '6d0df9615ba8'],
@@ -35,6 +40,13 @@ describe('Outline geometry', function() {
         }
         const parts = Object.fromEntries(Object.keys(expected).map(what => [what, {what}]))
         ;(await measured(parts)).should.deep.equal(expected)
+    })
+
+    it('debug arrows', async function() {
+        // a rotated point and its mirror image show how the arrows follow the orientation
+        const rotated = {anchor: {shift: [30, 0], rotate: 30}, mirror: {distance: 30}}
+        const arrows = await measured({debug: {what: 'debug'}}, {points: {zones: {matrix: null, rotated}}})
+        arrows.debug.should.deep.equal([[-4.33, -1], [34.33, 7], 2, 'd0c95b0c613e'])
     })
 
     it('hotswap sockets', async function() {
