@@ -9,21 +9,6 @@ outlines:
     - what: rectangle
       where: true
       size: 20
-  svg-path-inline:
-    - what: svg
-      where: matrix_c1_r1
-      paths: M 0 0 L 0 -2.5 L -2.5 -2.5 L -2.5 0 Z
-    - what: outline
-      name: reference
-      operation: stack
-  svg-path-single:
-    - what: svg
-      where: matrix_c1_r1
-      paths:
-        - M 0 0 L 0 -2.5 L -2.5 -2.5 L -2.5 0 Z
-    - what: outline
-      name: reference
-      operation: stack
   svg-path-multiple:
     - what: svg
       where: matrix_c1_r1

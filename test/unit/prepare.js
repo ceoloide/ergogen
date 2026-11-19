@@ -539,5 +539,4 @@ describe('Prepare', function() {
         // cycles through nested calls are still detected
         p.concat.bind(this, {a: '$concat("x", $concat(a))'}).should.throw('Circular dependency')
     })
-
 })

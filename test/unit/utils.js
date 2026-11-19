@@ -244,7 +244,7 @@ describe('Utils', function() {
             await unplaced('M 0 0', 'Path 0 for SVG outline "outlines.o.0" does not contain any geometry')
             await unplaced('garbage', 'Path 0 for SVG outline "outlines.o.0" has invalid path data, unexpected "g" at offset 0')
             await unplaced('M 0 0 L 10 0 L 10 10', 'SVG paths need to be closed shapes (check failed for path 0 of "outlines.o.0")')
-            await unplaced([], 'must have at least one path')
+            await unplaced([], 'SVG outline "outlines.o.0" must have at least one path!')
             await unplaced(12, 'must be a string or an array')
             // malformed path data is rejected before makerjs could misread it (or hang on it)
             for (const [paths, snippet] of malformed) {
