@@ -343,6 +343,15 @@ const expand_shorthand = (config, name, units) => {
     }
 }
 
+// how the shapes of a single part combine with each other, so that operating with the
+// result on an outline gives the same as operating on it with the shapes one by one
+const collectors = {
+    add: u.union,
+    subtract: u.union,
+    intersect: u.intersect,
+    stack: u.stack
+}
+
 exports.parse = (config, points, units) => {
 
     // output outlines will be collected here
@@ -362,7 +371,7 @@ exports.parse = (config, points, units) => {
         }
         parts = a.sane(parts, `outlines.${outline_name}`, 'object')()
         
-        for (let [part_name, part] of Object.entries(parts)) {
+        for (let [part_index, [part_name, part]] of Object.entries(parts).entries()) {
             
             const name = `outlines.${outline_name}.${part_name}`
 
@@ -372,7 +381,8 @@ exports.parse = (config, points, units) => {
             }
 
             // process keys that are common to all part declarations
-            const operation = u[a.in(part.operation || 'add', `${name}.operation`, ['add', 'subtract', 'intersect', 'stack'])]
+            const operation_name = a.in(part.operation || 'add', `${name}.operation`, Object.keys(collectors))
+            const operation = u[operation_name]
             const what = a.in(part.what || 'outline', `${name}.what`, Object.keys(whats))
             const bound = !!part.bound
             const asym = a.asym(part.asym || 'source', `${name}.asym`)
@@ -405,6 +415,12 @@ exports.parse = (config, points, units) => {
             const [shape_maker, shape_units] = whats[what](part, name, points, outlines, units)
             const adjust = start => anchor(original_adjust || {}, `${name}.adjust`, points, start)(shape_units)
 
+            // modifiers should only affect the current part, so when there are earlier parts to
+            // leave alone, its shapes are collected separately, and combined with the outline later
+            const detached = part_index > 0 && (scale !== 1 || expand || fillet)
+            const collect = detached ? collectors[operation_name] : operation
+            let target = detached ? undefined : outlines[outline_name]
+
             // and then the shape is repeated for all where positions
             for (const w of where(shape_units)) {
                 const point = adjust(w.clone())
@@ -413,24 +429,33 @@ exports.parse = (config, points, units) => {
                     shape = binding(shape, bbox, point, shape_units)
                 }
                 shape = point.position(shape) // ...actual positioning happens here
-                outlines[outline_name] = operation(outlines[outline_name], shape)
+                target = target ? collect(target, shape) : shape
+                // unless detached, shapes become part of the outline right away
+                if (!detached) outlines[outline_name] = target
             }
 
+            // a detached part without any shapes has nothing to modify or combine
+            if (!target) continue
+            // otherwise it gets its own root, so that modifiers treat it the same way as an outline
+            if (detached) target = {models: {shape: target}}
+
             if (scale !== 1) {
-                outlines[outline_name] = m.model.scale(outlines[outline_name], scale)
+                target = m.model.scale(target, scale)
             }
     
             if (expand) {
-                outlines[outline_name] = m.model.outline(
-                    outlines[outline_name], Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
+                target = m.model.outline(
+                    target, Math.abs(expand), joints, (expand < 0), {farPoint: u.farPoint}
                 )
             }
 
             if (fillet) {
-                for (const [index, chain] of m.model.findChains(outlines[outline_name]).entries()) {
-                    outlines[outline_name].models[`fillet_${part_name}_${index}`] = m.chain.fillet(chain, fillet)
+                for (const [index, chain] of m.model.findChains(target).entries()) {
+                    target.models[`fillet_${part_name}_${index}`] = m.chain.fillet(chain, fillet)
                 }
             }
+
+            outlines[outline_name] = detached ? operation(outlines[outline_name], target) : target
         }
 
         // final adjustments
