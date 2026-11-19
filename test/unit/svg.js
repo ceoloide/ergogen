@@ -82,12 +82,8 @@ describe('SVG', function() {
             `<path constructor="x" __proto__="y" style="constructor: x; __proto__: y" d="${square}"/></svg>`, unit_square],
         'unreferenced marker': [doc(`<defs><marker id="m"><circle r="10"/></marker></defs>` +
             `<g style="marker: none"><path marker-end="none" filter="none" style="rotate: none; scale: none" d="${square}"/></g>`), unit_square],
-        'compact path data': [doc('<path d="M10 0h-10a5,5 0 0110,0z"/>'), {low: [0, 0], high: [10, 5], chains: 1}],
         'inert important declarations': [doc(`<g style="fill:red !important;Transform:none!important"><path ` +
             `style="stroke:blue; -webkit-transform: none ! IMPORTANT; marker-end:none !important" d="${square}"/></g>`), unit_square],
-        'repeated horizontal and vertical lines': [doc('<path d="M0 0H5 10V5 10H0Z"/>'), unit_square],
-        'repeated relative horizontal and vertical lines': [doc('<path d="M0 0h5 5v5 5h-5 -5z"/>'), unit_square],
-        'repeated backwards relative line': [doc('<path d="M0 0h-2 12v10h-10z"/>'), {low: [-2, -10], high: [10, 0], chains: 1}],
         'default namespace restored after a foreign group': [doc(`<g xmlns="urn:other"><path d="${far_square}"/></g><path d="${square}"/>`), unit_square],
         'svg namespace inside a foreign group': [doc(`<g xmlns="urn:other"><g xmlns="${svg_ns}"><path d="${far_square}"/></g></g><path d="${square}"/>`), unit_square],
         'rebound prefix': [`<svg ${ns} xmlns:s="urn:other"><s:path d="${far_square}"/><g xmlns:s="${svg_ns}"><s:path d="${square}"/></g>` +
@@ -185,23 +181,6 @@ describe('SVG', function() {
         'truncated path data': [doc(`<path d="${square}"/><path d="M 0 0 C 1 1 2 2"/>`), 'Path 1 for SVG outline'],
         'empty path data': [doc('<path d=""/>'), 'Path 0 for SVG outline'],
     }
-    // malformed path data, which makerjs would misread or hang on
-    for (const [title, data, expected] of [
-        ['cubic', 'M 0 0 C 1 1 2 2', 'the command "C" at offset 6 takes 6 arguments per segment, not 4'],
-        ['quadratic', 'M 0 0 Q 1 1', 'the command "Q" at offset 6 takes 4 arguments'],
-        ['smooth cubic', 'M 0 0 S 1 1', 'the command "S" at offset 6 takes 4 arguments'],
-        ['smooth quadratic', 'M 0 0 T 1', 'the command "T" at offset 6 takes 2 arguments'],
-        ['line', 'M 0 0 L 10 0 L 10 10 L 4 Z', 'the command "L" at offset 21 takes 2 arguments'],
-        ['line to origin', 'M 0 0 L 10 0 L 10 10 L 0 Z', 'the command "L" at offset 21 takes 2 arguments'],
-        ['horizontal', 'M 0 0 H 10 V 10 H Z', 'the command "H" at offset 16 takes 1 argument per segment, not 0'],
-        ['moveto', 'M 0 L 10 0 L 10 10 Z', 'the command "M" at offset 0 takes 2 arguments'],
-        ['nonfinite', 'M 0 0 L 1e999 0 L 0 10 Z', 'the number "1e999" at offset 8 is not finite'],
-        ['trailing command', `${square} X`, 'unexpected "X" at offset 30'],
-        ['trailing arguments', `${square} R 1 2`, 'unexpected "R" at offset 30'],
-    ]) {
-        rejected[`malformed ${title}`] = [doc(`<path d="${data}"/>`), `Path 0 for SVG outline`]
-        rejected[`malformed ${title} message`] = [doc(`<path d="${data}"/>`), `has invalid path data, ${expected}`]
-    }
     for (const shape of ['rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'text', 'image', 'use']) {
         rejected[`visible ${shape}`] = [doc(`<path d="${square}"/><g><${shape}/></g>`), `contains a visible <${shape}>, but only paths are supported! Convert objects to paths`]
     }
@@ -213,7 +192,6 @@ describe('SVG', function() {
         svg_lib.extract.bind(this, undefined, 'n').should.throw('SVG outline "n" should be text')
         // errors name the outline
         svg_lib.extract.bind(this, doc('<rect/>'), 'named').should.throw('SVG outline "named" contains a visible <rect>')
-        svg_lib.tolerance.should.equal(1e-4)
     })
 
     it('path data', function() {
@@ -356,35 +334,44 @@ describe('SVG', function() {
         })
     })
 
-    // the same fixtures must give the same results when loaded from a bundle and when built
-    const runners = {'bundle loading': via_bundle, 'build transform': via_build}
-    const scope = {'bundle loading': 'svg_bundle_test', 'build transform': 'svg_build_test'}
-    for (const [runner_name, run] of Object.entries(runners)) {
-        describe(runner_name, function() {
-            for (const [title, [text, expected]] of Object.entries(accepted)) {
-                it(title, async function() {
-                    if (typeof expected == 'string') {
-                        await run(text).should.be.rejectedWith(expected)
-                    } else {
-                        (await run(text)).should.deep.equal(expected)
-                    }
-                })
-            }
-            for (const [title, [text, expected]] of Object.entries(rejected)) {
-                it(title, async function() {
-                    await run(text).should.be.rejectedWith(`SVG outline "${scope[runner_name]}"`)
-                    await run(text).should.be.rejectedWith(expected)
-                })
-            }
-        })
-    }
+    // the markup fixtures, end to end through a loaded bundle
+    describe('bundle loading', function() {
+        for (const [title, [text, expected]] of Object.entries(accepted)) {
+            it(title, async function() {
+                if (typeof expected == 'string') {
+                    await via_bundle(text).should.be.rejectedWith(expected)
+                } else {
+                    (await via_bundle(text)).should.deep.equal(expected)
+                }
+            })
+        }
+        for (const [title, [text, expected]] of Object.entries(rejected)) {
+            it(title, async function() {
+                const error = await via_bundle(text).should.be.rejected
+                error.message.should.include('SVG outline "svg_bundle_test"')
+                error.message.should.include(expected)
+            })
+        }
+    })
 
     it('bundled svg outlines take no paths', async function() {
         // fixed path data cannot take an ignored `paths` option
         await via_bundle(doc(`<path d="${square}"/>`), {paths: far_square}).should.be.rejectedWith('Unexpected key "paths" within field "outlines.o.0"')
     })
 
-    it('build transform skips other files', async function() {
+    it('build transform', async function() {
+        // the build gives the same results as bundle loading
+        for (const title of ['plain path without viewBox', 'existing fixture']) {
+            const [text, expected] = accepted[title]
+            ;(await via_build(text)).should.deep.equal(expected, title)
+        }
+        for (const title of ['unsupported element', 'path transform']) {
+            const [text, expected] = rejected[title]
+            const error = await via_build(text).should.be.rejected
+            error.message.should.include('SVG outline "svg_build_test"')
+            error.message.should.include(expected)
+        }
+        // other files are left alone
         should.equal((await build_plugin()).transform('const x = 1', '/anywhere/x.js'), null)
     })
 

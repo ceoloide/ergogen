@@ -176,9 +176,14 @@ describe('Utils', function() {
             const {low, high} = m.measure.modelExtents(model)
             return [low.map(round), high.map(round)]
         }
-        const shape = async (part, points={zones: {matrix: null}}) => {
+        const length = model => round(m.measure.modelPathLength(model))
+        // a single svg part, processed into its outline (with the model in `yaml` and the export in `dxf`)
+        const svg_outline = async (part, points={zones: {matrix: null}}) => {
             const results = await ergogen.process({points, outlines: {o: [{what: 'svg', where: true, ...part}]}}, {debug: true})
-            const model = results.outlines.o.yaml
+            return results.outlines.o
+        }
+        const shape = async (part, points) => {
+            const model = (await svg_outline(part, points)).yaml
             return {bounds: extents(model), chains: m.model.findChains(model).length}
         }
         const reject = (part, snippet) => shape(part).should.be.rejectedWith(snippet)
@@ -208,10 +213,10 @@ describe('Utils', function() {
 
         it('curve accuracy', async function() {
             const curve = async part => {
-                const model = (await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, ...part}]}}, {debug: true})).outlines.o.yaml
+                const model = (await svg_outline(part)).yaml
                 let paths = 0
                 m.model.walk(model, {onPath: () => paths++})
-                return {paths, bounds: extents(model), length: round(m.measure.modelPathLength(model))}
+                return {paths, bounds: extents(model), length: length(model)}
             }
             const cubic = 'M0 0 C0 100 100 100 100 0 Z'
             const elliptical = 'M0 0 A20 10 0 0 1 40 0 Z'
@@ -246,8 +251,7 @@ describe('Utils', function() {
                 await unplaced(paths, snippet)
             }
             // valid paths without placements produce nothing
-            ;(await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: false, paths: square}]}}, {debug: true}))
-                .outlines.o.yaml.models.export.models.should.deep.equal({})
+            ;(await svg_outline({paths: square, where: false})).yaml.models.export.models.should.deep.equal({})
         })
 
         it('import errors', async function() {
@@ -269,8 +273,8 @@ describe('Utils', function() {
         it('repeated horizontal and vertical lines', async function() {
             // makerjs reads only the first argument of "H" and "V", so repeats must match explicit commands
             const outline = async paths => {
-                const model = (await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, paths}]}}, {debug: true})).outlines.o.yaml
-                return {bounds: extents(model), length: round(m.measure.modelPathLength(model))}
+                const model = (await svg_outline({paths})).yaml
+                return {bounds: extents(model), length: length(model)}
             }
             const unit = {bounds: [[0, -10], [10, 0]], length: 40}
             for (const [repeated, explicit, expected] of [
@@ -288,9 +292,8 @@ describe('Utils', function() {
         it('degenerate arcs', async function() {
             // arcs with a zero radius or coinciding endpoints are drawn as lines, so no stray arc remains
             const outline = async paths => {
-                const results = await ergogen.process({points: {zones: {matrix: null}}, outlines: {o: [{what: 'svg', where: true, paths}]}}, {debug: true})
-                const model = results.outlines.o.yaml
-                return {bounds: extents(model), length: round(m.measure.modelPathLength(model)), arcs: results.outlines.o.dxf.includes('\nARC\n')}
+                const {yaml, dxf} = await svg_outline({paths})
+                return {bounds: extents(yaml), length: length(yaml), arcs: dxf.includes('\nARC\n')}
             }
             const unit = {bounds: [[0, -10], [10, 0]], length: 40, arcs: false}
             for (const paths of [
