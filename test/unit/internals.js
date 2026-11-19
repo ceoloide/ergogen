@@ -62,7 +62,7 @@ describe('Internals', function() {
                 second.calledOnce.should.be.true
             }
         } finally {
-            replaced.forEach((what, index) => ergogen.inject('outline', what, originals[index]))
+            for (const [index, what] of replaced.entries()) ergogen.inject('outline', what, originals[index])
             for (const what of prototype_names) delete whats[what]
         }
 
