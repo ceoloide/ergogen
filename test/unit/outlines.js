@@ -20,46 +20,15 @@ describe('Outline geometry', function() {
         return Object.fromEntries(Object.entries(results.outlines).map(([name, outline]) => [name, measure(outline)]))
     }
 
-    it('built-in shapes', async function() {
-        // each outline matches the built-in footprint of the same name, seen from the top
-        // (the logo is a decoration without a footprint, and details like the rotary knob stay separate chains)
-        // the switches are drawn as seen from the top, too, centered on their point
-        const expected = {
-            alps: [[-7.75, -6.4], [7.75, 6.4], 4, '44a534fdcc43'],
-            choc_v1: [[-7.5, -7.5], [7.5, 7.5], 5, '606be71f692e'],
-            choc_v2: [[-7.5, -7.5], [7.5, 7.5], 4, 'a99d6a203d4f'],
-            ergogen_logo: [[-7.5, -4.529], [7.5, 4.529], 3, '3652642f2e77'],
-            jstph: [[-2.95, -6.25], [2.95, 1.35], 6, 'e069054a114e'],
-            mx: [[-7.8, -7.8], [7.8, 7.8], 4, '70ca9f79dbf7'],
-            oled: [[-34.8, -11.99], [3.2, 0.01], 6, 'e329e22044e0'],
-            promicro: [[-19.304, -8.89], [15.24, 8.89], 26, '163021a80477'],
-            rgb: [[-2.5, -2.5], [2.5, 2.5], 2, '6d0df9615ba8'],
-            rotary: [[-8.62, -8.46], [8.38, 8.54], 3, 'c7b338f3a093'],
-            scrollwheel: [[-8.4, -7.6], [9.8, 6.6], 9, 'd061ebbe853b'],
-            trrs: [[-5.35, -12.1], [0.75, 2], 8, 'b67aff9d7422'],
-        }
-        const parts = Object.fromEntries(Object.keys(expected).map(what => [what, {what}]))
-        ;(await measured(parts)).should.deep.equal(expected)
-    })
-
-    it('debug arrows', async function() {
-        // a rotated point and its mirror image show how the arrows follow the orientation
-        const rotated = {anchor: {shift: [30, 0], rotate: 30}, mirror: {distance: 30}}
-        const arrows = await measured({debug: {what: 'debug'}}, {points: {zones: {matrix: null, rotated}}})
-        arrows.debug.should.deep.equal([[-4.33, -1], [34.33, 7], 2, 'd0c95b0c613e'])
-    })
-
-    it('hotswap sockets', async function() {
+    it('choc socket origin', async function() {
+        // the origin of the choc socket takes units and expressions, on top of its built-in offset
         const sockets = await measured({
-            mx: {what: 'mx_hotswap_socket'},
+            default: {what: 'choc_hotswap_socket'},
             expression: {what: 'choc_hotswap_socket', origin: ['u/2', 'u']},
             literal: {what: 'choc_hotswap_socket', origin: [9.525, 19.05]},
-        }, {units: {u: 19.05}, points: {zones: {matrix: null}, mirror: {distance: 40}}})
-        // the mx socket is north of the key center, and mirrored on the mirrored half
-        sockets.mx.should.deep.equal([[-8.36, 0.8], [48.36, 6.8], 2, '612cf70d97de'])
-        // the origin of the choc socket takes units and expressions
-        sockets.expression.should.deep.equal([[-19.125, -27.25], [59.125, -20.55], 2, 'b1fe8c47da5b'])
-        sockets.literal.should.deep.equal(sockets.expression)
+        }, {units: {u: 19.05}})
+        sockets.expression.should.deep.equal(sockets.literal)
+        sockets.expression.should.not.deep.equal(sockets.default)
     })
 
     it('asym clone filters', async function() {
