@@ -2,7 +2,7 @@ const u = require('../utils')
 
 // two arrows that show where a point is and how it is oriented
 // the longer arrow follows the y axis of the point (up) and the shorter one its x axis (right)
-// on a mirrored point the x arrow points left, like any other svg outline
+// on a mirrored point the x arrow points left, like any other svg outline (unless `resist` is set)
 module.exports = (config, name, points, outlines, units) => {
     // svg coordinates relative to the point (y pointing down), so the default origin needs no offset
     // the two arrows overlap at the point, and are unioned into a single shape
