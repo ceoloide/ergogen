@@ -161,7 +161,7 @@ const import_svg_path = (raw, index, name, options) => {
 }
 
 exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units) => {
-    a.unexpected(config, name, ['accuracy', 'flip_horizontally', 'flip_vertically', 'origin'])
+    a.unexpected(config, name, ['accuracy', 'flip_horizontally', 'flip_vertically', 'origin', 'resist'])
     // without an explicit accuracy, makerjs derives one from the size of each curve
     // (a fixed fine default would make unions of curved paths orders of magnitude slower)
     const options = {}
@@ -173,6 +173,8 @@ exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units
     const flip_horizontally = a.sane(config.flip_horizontally || false, `${name}.flip_horizontally`, 'boolean')(units)
     const flip_vertically = a.sane(config.flip_vertically || false, `${name}.flip_vertically`, 'boolean')(units)
     const origin = a.xy(config.origin || [0, 0], `${name}.origin`)(units)
+    // like an anchor's `resist`, this keeps the shape from being flipped on mirrored points
+    const resist = a.sane(config.resist || false, `${name}.resist`, 'boolean')(units)
 
     let paths = paths_raw
     if (a.type(paths)() == 'string') paths = [paths]
@@ -202,7 +204,7 @@ exports.svg_paths_to_outline = (paths_raw, config, name, points, outlines, units
 
     return [point => {
         let placed = exports.deepcopy(shape)
-        if (point.meta.mirrored) {
+        if (point.meta.mirrored && !resist) {
             placed = m.model.mirror(placed, true, false)
         }
         const bbox = m.measure.modelExtents(placed)
