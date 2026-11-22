@@ -48,28 +48,27 @@ const check_key_reserved_fields = (obj, name) => {
     return obj
 }
 
-const check_row_reserved_fields = (rows, name) => {
+const sanitize_key = (raw, name) => check_key_reserved_fields(a.sane(raw || {}, name, 'object')(), name)
+
+const prepare_rows = (raw, name) => {
+    const rows = a.sane(raw || {}, name, 'object')()
     for (const [key, val] of Object.entries(rows)) {
-        if (a.type(val)() == 'object') check_key_reserved_fields(val, `${name}.${key}`)
+        rows[key] = val || {}
+        if (a.type(rows[key])() == 'object') check_key_reserved_fields(rows[key], `${name}.${key}`)
     }
+    return rows
 }
 
 const render_zone = exports._render_zone = (zone_name, zone, anchor, global_key, units) => {
 
     // zone-wide sanitization
 
-    a.unexpected(zone, `points.zones.${zone_name}`, ['columns', 'rows', 'key'])
+    const zone_path = `points.zones.${zone_name}`
+    a.unexpected(zone, zone_path, ['columns', 'rows', 'key'])
     // the anchor comes from "above", because it needs other zones too (for references)
-    const cols = zone.columns = a.sane(zone.columns || {}, `points.zones.${zone_name}.columns`, 'object')()
-    const zone_wide_rows = a.sane(zone.rows || {}, `points.zones.${zone_name}.rows`, 'object')()
-    for (const [key, val] of Object.entries(zone_wide_rows)) {
-        zone_wide_rows[key] = val || {} // no check yet, as it will be extended later
-    }
-    check_row_reserved_fields(zone_wide_rows, `points.zones.${zone_name}.rows`)
-    const zone_wide_key = check_key_reserved_fields(
-        a.sane(zone.key || {}, `points.zones.${zone_name}.key`, 'object')(),
-        `points.zones.${zone_name}.key`
-    )
+    const cols = zone.columns = a.sane(zone.columns || {}, `${zone_path}.columns`, 'object')()
+    const zone_wide_rows = prepare_rows(zone.rows, `${zone_path}.rows`)
+    const zone_wide_key = sanitize_key(zone.key, `${zone_path}.key`)
 
     // algorithm prep
 
@@ -95,29 +94,11 @@ const render_zone = exports._render_zone = (zone_name, zone, anchor, global_key,
         // column-level sanitization
 
         col = col || {}
+        const col_path = `${zone_path}.columns.${col_name}`
 
-        a.unexpected(
-            col,
-            `points.zones.${zone_name}.columns.${col_name}`,
-            ['rows', 'key']
-        )
-        col.rows = a.sane(
-            col.rows || {},
-            `points.zones.${zone_name}.columns.${col_name}.rows`,
-            'object'
-        )()
-        for (const [key, val] of Object.entries(col.rows)) {
-            col.rows[key] = val || {} // again, no check yet, as it will be extended later
-        }
-        check_row_reserved_fields(col.rows, `points.zones.${zone_name}.columns.${col_name}.rows`)
-        col.key = check_key_reserved_fields(
-            a.sane(
-                col.key || {},
-                `points.zones.${zone_name}.columns.${col_name}.key`,
-                'object'
-            )(),
-            `points.zones.${zone_name}.columns.${col_name}.key`
-        )
+        a.unexpected(col, col_path, ['rows', 'key'])
+        col.rows = prepare_rows(col.rows, `${col_path}.rows`)
+        col.key = sanitize_key(col.key, `${col_path}.key`)
 
         // combining row data from zone-wide defs and col-specific defs
 
@@ -281,6 +262,15 @@ const perform_mirror = exports._perform_mirror = (point, axis, units) => {
     return [mirrored_name, mp]
 }
 
+const mirror_points = (candidates, axis, units) => {
+    const mirrored = {}
+    for (const point of candidates) {
+        const [mname, mp] = perform_mirror(point, axis, units)
+        if (mp) mirrored[mname] = mp
+    }
+    return mirrored
+}
+
 const perform_autobind = exports._perform_autobind = (points, units) => {
 
     const bounds = {}
@@ -311,46 +301,23 @@ const perform_autobind = exports._perform_autobind = (points, units) => {
         const col = p.meta.col.name
         const col_list = col_lists[zone]
         const col_bounds = bounds[zone][col]
+        const col_index = col_list.indexOf(col)
 
-        
+        const bind_neighbor = offset => {
+            const neighbor_index = col_index + offset
+            if (neighbor_index < 0 || neighbor_index >= col_list.length) return 0
+            const neighbor = bounds[zone][col_list[neighbor_index]]
+            return neighbor && p.y >= neighbor.min && p.y <= neighbor.max ? autobind : 0
+        }
+
         // specify default as -1, so we can recognize where it was left undefined even after number-ification
-        const bind = p.meta.bind = a.trbl(p.meta.bind, `${p.meta.name}.bind`, -1)(units)
-
-        // up
-        if (bind[0] == -1) {
-            if (p.y < col_bounds.max) bind[0] = autobind
-            else bind[0] = 0
-        }
-
-        // down
-        if (bind[2] == -1) {
-            if (p.y > col_bounds.min) bind[2] = autobind
-            else bind[2] = 0
-        }
-
-        // left
-        if (bind[3] == -1) {
-            bind[3] = 0
-            const col_index = col_list.indexOf(col)
-            if (col_index > 0) {
-                const left = bounds[zone][col_list[col_index - 1]]
-                if (left && p.y >= left.min && p.y <= left.max) {
-                    bind[3] = autobind
-                }
-            }
-        }
-
-        // right
-        if (bind[1] == -1) {
-            bind[1] = 0
-            const col_index = col_list.indexOf(col)
-            if (col_index < col_list.length - 1) {
-                const right = bounds[zone][col_list[col_index + 1]]
-                if (right && p.y >= right.min && p.y <= right.max) {
-                    bind[1] = autobind
-                }
-            }
-        }
+        const [top, right, bottom, left] = a.trbl(p.meta.bind, `${p.meta.name}.bind`, -1)(units)
+        p.meta.bind = [
+            top == -1 ? (p.y < col_bounds.max ? autobind : 0) : top,
+            right == -1 ? bind_neighbor(1) : right,
+            bottom == -1 ? (p.y > col_bounds.min ? autobind : 0) : bottom,
+            left == -1 ? bind_neighbor(-1) : left
+        ]
     }
 }
 
@@ -359,7 +326,7 @@ exports.parse = (config, units) => {
     // config sanitization
     a.unexpected(config, 'points', ['zones', 'key', 'rotate', 'mirror'])
     const zones = a.sane(config.zones, 'points.zones', 'object')()
-    const global_key = check_key_reserved_fields(a.sane(config.key || {}, 'points.key', 'object')(), 'points.key')
+    const global_key = sanitize_key(config.key, 'points.key')
     const global_rotate = a.sane(config.rotate || 0, 'points.rotate', 'number')(units)
     const global_mirror = config.mirror
     let points = {}
@@ -368,11 +335,12 @@ exports.parse = (config, units) => {
     for (let [zone_name, zone] of Object.entries(zones)) {
 
         // zone sanitization
-        zone = a.sane(zone || {}, `points.zones.${zone_name}`, 'object')()
+        const zone_path = `points.zones.${zone_name}`
+        zone = a.sane(zone || {}, zone_path, 'object')()
 
         // extracting keys that are handled here, not at the zone render level
-        const anchor = anchor_lib.parse(zone.anchor || {}, `points.zones.${zone_name}.anchor`, points)(units)
-        const rotate = a.sane(zone.rotate || 0, `points.zones.${zone_name}.rotate`, 'number')(units)
+        const anchor = anchor_lib.parse(zone.anchor || {}, `${zone_path}.anchor`, points)(units)
+        const rotate = a.sane(zone.rotate || 0, `${zone_path}.rotate`, 'number')(units)
         const mirror = zone.mirror
         delete zone.anchor
         delete zone.rotate
@@ -409,38 +377,25 @@ exports.parse = (config, units) => {
         points = Object.assign(points, new_points)
 
         // per-zone mirroring for the new keys
-        const axis = parse_axis(mirror, `points.zones.${zone_name}.mirror`, points, units)
+        const axis = parse_axis(mirror, `${zone_path}.mirror`, points, units)
         if (axis !== undefined) {
-            const mirrored_points = {}
-            for (const new_point of Object.values(new_points)) {
-                const [mname, mp] = perform_mirror(new_point, axis, units)
-                if (mp) {
-                    mirrored_points[mname] = mp
-                }
-            }
-            points = Object.assign(points, mirrored_points)
+            points = Object.assign(points, mirror_points(Object.values(new_points), axis, units))
         }
     }
 
     // applying global rotation
-    for (const point of Object.values(points)) {
-        if (global_rotate) {
+    if (global_rotate) {
+        for (const point of Object.values(points)) {
             point.rotate(global_rotate)
         }
     }
 
     // global mirroring for points that haven't been mirrored yet
     const global_axis = parse_axis(global_mirror, `points.mirror`, points, units)
-    const global_mirrored_points = {}
-    for (const point of Object.values(points)) {
-        if (global_axis !== undefined && point.meta.mirrored === undefined) {
-            const [mname, mp] = perform_mirror(point, global_axis, units)
-            if (mp) {
-                global_mirrored_points[mname] = mp
-            }
-        }
+    if (global_axis !== undefined) {
+        const unmirrored = Object.values(points).filter(p => p.meta.mirrored === undefined)
+        points = Object.assign(points, mirror_points(unmirrored, global_axis, units))
     }
-    points = Object.assign(points, global_mirrored_points)
 
     // removing temporary points
     const filtered = {}
