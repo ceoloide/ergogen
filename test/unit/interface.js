@@ -375,4 +375,61 @@ describe('Interface', function() {
         const result_no_svg = await ergogen.process(medium, {svg: false})
         result_no_svg.should.not.have.nested.property('outlines.export.svg')
     })
+
+    it('path outlines', async function() {
+        const round = val => Number(val.toFixed(4)) + 0
+        const extents = model => {
+            const {low, high} = m.measure.modelExtents(model)
+            return [low.map(round), high.map(round)]
+        }
+        const run_path = async (part, extra_points={}) => {
+            const results = await ergogen.process({
+                points: {zones: {p: null}, ...extra_points},
+                outlines: {o: [{what: 'path', ...part}]}
+            }, {debug: true})
+            return results.outlines.o.yaml
+        }
+        const pt = (x, y) => ({ref: 'p', shift: [x, y]})
+
+        const vertical = await run_path({segments: [{type: 'arc', points: [pt(0, 0), pt(5, 5), pt(0, 10)]}]})
+        extents(vertical).should.deep.equal([[0, 0], [5, 10]])
+        m.model.findChains(vertical).should.have.lengthOf(1)
+        m.model.findChains(vertical)[0].endless.should.be.true
+
+        const s_curve = await run_path({segments: [{type: 's_curve', points: [pt(10, 10), pt(0, 0)]}]})
+        extents(s_curve).should.deep.equal([[0, 0], [10, 10]])
+        m.model.findChains(s_curve)[0].endless.should.be.true
+
+        const bezier = await run_path({segments: [{type: 'bezier', accuracy: 0.5, points: [pt(0, 0), pt(5, 10), pt(10, 0)]}]})
+        extents(bezier)[0].should.deep.equal([0, 0])
+        extents(bezier)[1][0].should.equal(10)
+        m.model.findChains(bezier)[0].endless.should.be.true
+
+        const chained = await run_path({
+            segments: [
+                {type: 'line', points: [pt(0, 0), pt(10, 0), pt(10, 10)]},
+                {type: 'line', points: [pt(0, 10), pt(0, 0)]}
+            ]
+        })
+        extents(chained).should.deep.equal([[0, 0], [10, 10]])
+        m.model.findChains(chained).should.have.lengthOf(1)
+        m.model.findChains(chained)[0].endless.should.be.true
+
+        await Promise.all([
+            run_path({segments: [], extra: 1}).should.be.rejectedWith('Unexpected key "extra"'),
+            run_path({segments: [{type: 'bogus', points: []}]}).should.be.rejectedWith('should be one of [line, arc, s_curve, bezier]'),
+            run_path({segments: [{type: 'line', points: 'nope'}]}).should.be.rejectedWith('should be of type array'),
+            run_path({segments: [{type: 'line', points: [pt(0, 0), pt(1, 1)], accuracy: 1}]}).should.be.rejectedWith('Unexpected key "accuracy"'),
+            run_path({segments: [{type: 'bezier', points: [pt(0, 0), pt(1, 1), pt(2, 0)], extra: 1}]}).should.be.rejectedWith('Unexpected key "extra"'),
+            run_path({segments: [{type: 'line', points: [pt(0, 0)]}]}).should.be.rejectedWith('Line need at least 2 points, but 1 was provided (1 declared)'),
+            run_path({segments: [{type: 'line', points: []}]}).should.be.rejectedWith('Line need at least 2 points, but 0 were provided (0 declared)'),
+            run_path({segments: [{type: 'arc', points: [pt(0, 0), pt(1, 1)]}]}).should.be.rejectedWith('Arc needs 3 points, but 2 were provided (2 declared)'),
+            run_path({segments: [{type: 'line', points: [pt(0, 0), pt(1, 0)]}, {type: 'arc', points: [pt(2, 1)]}]}).should.be.rejectedWith('Arc needs 3 points, but 2 were provided (1 inherited from the previous segment, 1 declared)'),
+            run_path({segments: [{type: 's_curve', points: [pt(0, 0)]}]}).should.be.rejectedWith('S-Curve needs 2 points, but 1 was provided (1 declared)'),
+            run_path({segments: [{type: 'bezier', points: [pt(0, 0), pt(1, 1)]}]}).should.be.rejectedWith('Bezier Curve needs 3 or 4 points, but 2 were provided (2 declared)'),
+            run_path({segments: [{type: 'line', points: [pt(0, 0), pt(1, 0)]}, {type: 'bezier', points: [pt(2, 1)]}]}).should.be.rejectedWith('Bezier Curve needs 3 or 4 points, but 2 were provided (1 inherited from the previous segment, 1 declared)'),
+            run_path({segments: [{type: 's_curve', points: [pt(0, 0), pt(0, 10)]}]}).should.be.rejectedWith('S-Curve segment cannot have points on the same X axis'),
+            run_path({segments: [{type: 's_curve', points: [pt(0, 0), pt(10, 0)]}]}).should.be.rejectedWith('S-Curve segment cannot have points on the same Y axis')
+        ])
+    })
 })

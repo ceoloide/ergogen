@@ -203,106 +203,92 @@ const outline = (config, name, points, outlines, units) => {
     }, units]
 }
 
+const path_segments = {
+    line: {
+        keys: ['type', 'points'],
+        valid_points: count => count >= 2,
+        requirement: 'Line need at least 2 points',
+        target: 'models',
+        build: parsed_points => new m.models.ConnectTheDots(false, parsed_points)
+    },
+    arc: {
+        keys: ['type', 'points'],
+        valid_points: count => count === 3,
+        requirement: 'Arc needs 3 points',
+        target: 'paths',
+        build: parsed_points => new m.paths.Arc(...parsed_points)
+    },
+    s_curve: {
+        keys: ['type', 'points'],
+        valid_points: count => count === 2,
+        requirement: 'S-Curve needs 2 points',
+        target: 'models',
+        build: (parsed_points, segment_qname) => {
+            const [start, end] = parsed_points
+            a.assert(start[0] !== end[0], `The ${segment_qname} S-Curve segment cannot have points on the same X axis`)
+            a.assert(start[1] !== end[1], `The ${segment_qname} S-Curve segment cannot have points on the same Y axis`)
+            const width = Math.abs(end[0] - start[0])
+            const height = Math.abs(end[1] - start[1])
+            const mirror_x = start[0] > end[0]
+            const mirror_y = start[1] > end[1]
+            const s_curve_raw = new m.models.SCurve(width, height)
+            const mirrored_s_curve = m.model.mirror(s_curve_raw, mirror_x, mirror_y)
+            return m.model.move(mirrored_s_curve, start)
+        }
+    },
+    bezier: {
+        keys: ['type', 'points', 'accuracy'],
+        valid_points: count => count >= 3,
+        requirement: 'Bezier Curve needs 3 or 4 points',
+        target: 'models',
+        build: parsed_points => new m.models.BezierCurve(...parsed_points)
+    }
+}
+
 const path = (config, name, points, outlines, units) => {
 
     // prepare params
     a.unexpected(config, `${name}`, ['segments'])
     const segments = a.sane(config.segments, `${name}.segments`, 'array')()
-    const segments_points = [];
-    for(const [index, segment] of segments.entries()) {
-      a.in(segment.type, `${name}.segments.${index}.type`, ['line', 'arc', 's_curve', 'bezier'])
-      segments_points.push(a.sane(segment.points, `${name}.segments.${index}.points`, 'array')())
-      const num_points = segment.points.length
-      switch (segment.type) {
-       case 'bezier':
-          a.unexpected(segment, `${name}.segments.${index}`, ['type', `points`, 'accuracy'])
-          break
-        case 'arc':
-        case 'line':
-        case 's_curve':
-          a.unexpected(segment, `${name}.segments.${index}`, ['type', `points`])
-          break
-      }
-      switch (segment.type) {
-       case 'bezier':
-          a.assert(num_points > (index === 0 ? 2 : 1), `Bezier Curve needs 3 or 4 points, but ${index === 0 ? num_points : num_points + 1} were provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 'arc':
-          a.assert(num_points === (index === 0 ? 3 : 2), `Arc needs 3 points, but ${index === 0 ? num_points : num_points + 1} were provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 'line':
-          a.assert(num_points > (index === 0 ? 1 : 0), `Line need at least 2 points, but ${index === 0 ? num_points : num_points + 1} ${num_points === 1 ? 'was' : 'were'} provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 's_curve':
-          a.assert(num_points === (index === 0 ? 2 : 1), `S-Curve needs 2 points, but ${index === 0 ? num_points : num_points + 1} ${num_points === 1 ? 'was' : 'were'} provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-      }
+    for (const [index, segment] of segments.entries()) {
+        const segment_qname = `${name}.segments.${index}`
+        const type = a.in(segment.type, `${segment_qname}.type`, Object.keys(path_segments))
+        const spec = path_segments[type]
+        const declared = a.sane(segment.points, `${segment_qname}.points`, 'array')().length
+        a.unexpected(segment, segment_qname, spec.keys)
+        const inherited = index === 0 ? 0 : 1
+        const total = declared + inherited
+        const verb = total === 1 ? 'was' : 'were'
+        const source = inherited ? '1 inherited from the previous segment, ' : ''
+        a.assert(spec.valid_points(total), `${spec.requirement}, but ${total} ${verb} provided (${source}${declared} declared)`)
     }
 
     // return shape function and its units
-    return [(point) => {
-      let shape = {
-        models: {},
-        paths: {}
-      }
-      // the segment starts at [0, 0] as it will be positioned later
-      // but we keep the point metadata for potential mirroring purposes
-      let first_anchor = undefined
-      let last_anchor = new Point(0, 0, 0, point.meta)
-      for (const [index, segment] of segments.entries()){
-        const parsed_points = []
-        // Segments after the first one need one less point, as the start is taken from the
-        // last segment
-        if (index > 0) {
-          parsed_points.push(last_anchor.p)
-        }
-        let point_index = -1
-        for (const segment_point of segments_points[index]) {
-            const segment_points_name = `${name}.segments.${index}.points[${++point_index}]`
-            last_anchor = anchor(segment_point, segment_points_name, points, last_anchor)(units)
-            if(first_anchor === undefined) {
-              first_anchor = last_anchor
+    return [point => {
+        const shape = {models: {}, paths: {}}
+        let first_anchor = undefined
+        let last_anchor = new Point(0, 0, 0, point.meta)
+        for (const [index, segment] of segments.entries()) {
+            const segment_qname = `${name}.segments.${index}`
+            const parsed_points = []
+            if (index > 0) parsed_points.push(last_anchor.p)
+            let point_index = -1
+            for (const segment_point of segment.points) {
+                const segment_point_name = `${segment_qname}.points[${++point_index}]`
+                last_anchor = anchor(segment_point, segment_point_name, points, last_anchor)(units)
+                if (first_anchor === undefined) first_anchor = last_anchor
+                parsed_points.push(last_anchor.p)
             }
-            parsed_points.push(last_anchor.p)
+            const spec = path_segments[segment.type]
+            shape[spec.target][`path${index}`] = spec.build(parsed_points, segment_qname)
         }
-        const segment_name = `path${index}`
-        switch (segment.type) {
-          case 'line':
-            let line = new m.models.ConnectTheDots(false, parsed_points)
-            shape.models[segment_name] = line
-            break
-          case 'arc':
-            let arc = new m.paths.Arc(...parsed_points)
-            shape.paths[segment_name] = arc
-            break
-          case 's_curve':
-            const origin = parsed_points[0]
-            a.assert(parsed_points[0][0] !== parsed_points[1][0], `The ${name}.segments.${index} S-Curve segment cannot have points on the same X axis`)
-            const width = Math.abs(parsed_points[1][0] - parsed_points[0][0])
-            a.assert(parsed_points[0][1] !== parsed_points[1][1], `The ${name}.segments.${index} S-Curve segment cannot have points on the same Y axis`)
-            const height = Math.abs(parsed_points[1][1] - parsed_points[0][1])
-            const mirrorX = parsed_points[0][0] > parsed_points[1][0]
-            const mirrorY = parsed_points[0][1] > parsed_points[1][1]
-            const s_curve_raw = new m.models.SCurve(width, height)
-            const mirrored_s_curve = m.model.mirror(s_curve_raw, mirrorX, mirrorY)
-            const s_curve = m.model.move(mirrored_s_curve, origin)
-            shape.models[segment_name] = s_curve
-            break
-          case 'bezier':
-            let bezier = new m.models.BezierCurve(...parsed_points)
-            shape.models[segment_name] = bezier
-            break
+        if (first_anchor.x !== last_anchor.x || first_anchor.y !== last_anchor.y) {
+            shape.paths.closing_line = u.line(first_anchor.p, last_anchor.p)
         }
-      }
-      // We always close the shape with a line between the first and last anchor, if they are not already the same
-      if(first_anchor.x !== last_anchor.x || first_anchor.y != last_anchor.y) {
-        let closing_line = new m.paths.Line([first_anchor.x, first_anchor.y], [last_anchor.x, last_anchor.y])
-        shape.paths["closing_line"] = closing_line
-      }
-      const chain = m.model.findSingleChain(shape)
-      a.assert(chain.endless, "The provided path configuration doesn't generate a closed shape.")
-      const bbox = m.measure.modelExtents(shape)
-      return [shape, {low: bbox.low, high: bbox.high}]
+        const chain = m.model.findSingleChain(shape)
+        a.assert(chain.endless, "The provided path configuration doesn't generate a closed shape.")
+        const bbox = m.measure.modelExtents(shape)
+        return [shape, {low: bbox.low, high: bbox.high}]
     }, units]
 }
 
