@@ -1,39 +1,13 @@
-const m = require('makerjs')
+const convert_outline = require('./kicad_outline').convert_outline
 const version = require('../../package.json').version
 
 module.exports = {
 
-    convert_outline: (model, layer) => {
-        const grs = []
-        const xy = val => `${val[0]} ${-val[1]}`
-        m.model.walk(model, {
-            onPath: wp => {
-                const p = wp.pathContext
-                switch (p.type) {
-                    case 'line':
-                        grs.push(`(gr_line (start ${xy(p.origin)}) (end ${xy(p.end)}) (layer ${layer}) (stroke (width 0.15) (type default)))`)
-                        break
-                    case 'arc':
-                        const arc_center = p.origin
-                        const angle_start = p.startAngle > p.endAngle ? p.startAngle - 360 : p.startAngle
-                        const angle_diff = Math.abs(p.endAngle - angle_start)
-                        const arc_start = m.point.rotate(m.point.add(arc_center, [p.radius, 0]), angle_start, arc_center)
-                        const arc_mid = m.point.rotate(arc_start, angle_diff / 2, arc_center)
-                        const arc_end = m.point.rotate(arc_start, angle_diff, arc_center)
-                        grs.push(`(gr_arc (start ${xy(arc_start)}) (mid ${xy(arc_mid)}) (end ${xy(arc_end)}) (layer ${layer}) (stroke (width 0.15) (type default)))`)
-                        break
-                    case 'circle':
-                        const circle_center = p.origin
-                        const circle_end = m.point.add(circle_center, [p.radius, 0])
-                        grs.push(`(gr_circle (center ${xy(circle_center)}) (end ${xy(circle_end)}) (layer ${layer}) (stroke (width 0.15) (type default)) (fill none))`)
-                        break
-                    default:
-                        throw new Error(`Can't convert path type "${p.type}" to kicad!`)
-                }
-            }
-        })
-        return grs.join('\n')
-    },
+    convert_outline: convert_outline({
+        line: ({start, end, layer}) => `(gr_line (start ${start}) (end ${end}) (layer ${layer}) (stroke (width 0.15) (type default)))`,
+        arc: ({start, mid, end, layer}) => `(gr_arc (start ${start}) (mid ${mid}) (end ${end}) (layer ${layer}) (stroke (width 0.15) (type default)))`,
+        circle: ({center, end, layer}) => `(gr_circle (center ${center}) (end ${end}) (layer ${layer}) (stroke (width 0.15) (type default)) (fill none))`
+    }),
 
     body: params => {
         const date_text = new Date().toISOString().slice(0, 10)

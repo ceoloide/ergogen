@@ -1,36 +1,13 @@
-const m = require('makerjs')
+const convert_outline = require('./kicad_outline').convert_outline
 
 module.exports = {
 
-    convert_outline: (model, layer) => {
-        const grs = []
-        const xy = val => `${val[0]} ${-val[1]}`
-        m.model.walk(model, {
-            onPath: wp => {
-                const p = wp.pathContext
-                switch (p.type) {
-                    case 'line':
-                        grs.push(`(gr_line (start ${xy(p.origin)}) (end ${xy(p.end)}) (angle 90) (layer ${layer}) (width 0.15))`)
-                        break
-                    case 'arc':
-                        const arc_center = p.origin
-                        const angle_start = p.startAngle > p.endAngle ? p.startAngle - 360 : p.startAngle
-                        const angle_diff = Math.abs(p.endAngle - angle_start)
-                        const arc_end = m.point.rotate(m.point.add(arc_center, [p.radius, 0]), angle_start, arc_center)
-                        grs.push(`(gr_arc (start ${xy(arc_center)}) (end ${xy(arc_end)}) (angle ${-angle_diff}) (layer ${layer}) (width 0.15))`)
-                        break
-                    case 'circle':
-                        const circle_center = p.origin
-                        const circle_end = m.point.add(circle_center, [p.radius, 0])
-                        grs.push(`(gr_circle (center ${xy(circle_center)}) (end ${xy(circle_end)}) (layer ${layer}) (width 0.15))`)
-                        break
-                    default:
-                        throw new Error(`Can't convert path type "${p.type}" to kicad!`)
-                }
-            }
-        })
-        return grs.join('\n')
-    },
+    convert_outline: convert_outline({
+        line: ({start, end, layer}) => `(gr_line (start ${start}) (end ${end}) (angle 90) (layer ${layer}) (width 0.15))`,
+        // kicad 5 arcs use center as start, arc start as end, and a negative sweep angle
+        arc: ({center, start, angle, layer}) => `(gr_arc (start ${center}) (end ${start}) (angle ${angle}) (layer ${layer}) (width 0.15))`,
+        circle: ({center, end, layer}) => `(gr_circle (center ${center}) (end ${end}) (layer ${layer}) (width 0.15))`
+    }),
 
     body: params => {
 
