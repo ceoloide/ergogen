@@ -1,0 +1,15 @@
+points:
+  zones:
+    matrix:
+      columns:
+        col:
+      rows:
+        row:
+outlines:
+  repro:
+    - what: rectangle
+      size: [10, 10]
+    - operation: subtract
+      what: circle
+      radius: 5
+      expand: 1
