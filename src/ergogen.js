@@ -1,5 +1,6 @@
 const u = require('./utils')
 const io = require('./io')
+const upgrade = require('./upgrade')
 const prepare = require('./prepare')
 const units_lib = require('./units')
 const points_lib = require('./points')
@@ -26,9 +27,13 @@ const process = async (raw, options={}, logger=()=>{}) => {
     
     logger('Preprocessing input...')
     config = prepare.unnest(config)
+
+    config = upgrade.upgrade(config, logger)
+
     config = prepare.inherit(config)
     config = prepare.parameterize(config)
     config = prepare.concat(config)
+
     const results = {}
     if (debug) {
         results.raw = raw
@@ -39,7 +44,7 @@ const process = async (raw, options={}, logger=()=>{}) => {
         logger('Checking compatibility...')
         const engine = u.semver(config.meta.engine, 'config.meta.engine')
         if (!u.satisfies(version, engine)) {
-            throw new Error(`Current ergogen version (${version}) doesn\'t satisfy config's engine requirement (${config.meta.engine})!`)
+            throw new Error(`Current ergogen version (${version}) doesn't satisfy config's engine requirement (${config.meta.engine})!`)
         }
     }
 
