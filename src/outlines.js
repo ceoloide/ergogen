@@ -209,35 +209,32 @@ const path = (config, name, points, outlines, units) => {
     // prepare params
     a.unexpected(config, `${name}`, ['segments'])
     const segments = a.sane(config.segments, `${name}.segments`, 'array')()
-    const segments_points = [];
-    for(const [index, segment] of segments.entries()) {
-      a.in(segment.type, `${name}.segments.${index}.type`, ['line', 'arc', 's_curve', 'bezier'])
-      segments_points.push(a.sane(segment.points, `${name}.segments.${index}.points`, 'array')())
-      const num_points = segment.points.length
-      switch (segment.type) {
-       case 'bezier':
-          a.unexpected(segment, `${name}.segments.${index}`, ['type', `points`, 'accuracy'])
-          break
-        case 'arc':
-        case 'line':
-        case 's_curve':
-          a.unexpected(segment, `${name}.segments.${index}`, ['type', `points`])
-          break
-      }
-      switch (segment.type) {
-       case 'bezier':
-          a.assert(num_points > (index === 0 ? 2 : 1), `Bezier Curve needs 3 or 4 points, but ${index === 0 ? num_points : num_points + 1} were provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 'arc':
-          a.assert(num_points === (index === 0 ? 3 : 2), `Arc needs 3 points, but ${index === 0 ? num_points : num_points + 1} were provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 'line':
-          a.assert(num_points > (index === 0 ? 1 : 0), `Line need at least 2 points, but ${index === 0 ? num_points : num_points + 1} ${num_points === 1 ? 'was' : 'were'} provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-        case 's_curve':
-          a.assert(num_points === (index === 0 ? 2 : 1), `S-Curve needs 2 points, but ${index === 0 ? num_points : num_points + 1} ${num_points === 1 ? 'was' : 'were'} provided (${index === 0 ? '' : '1 inherited from the previous segment, '}${num_points} declared)`)
-          break
-      }
+    const segments_points = []
+    for (const [index, segment] of segments.entries()) {
+        const segment_name = `${name}.segments.${index}`
+        a.in(segment.type, `${segment_name}.type`, ['line', 'arc', 's_curve', 'bezier'])
+        segments_points.push(a.sane(segment.points, `${segment_name}.points`, 'array')())
+        a.unexpected(segment, segment_name, segment.type == 'bezier' ? ['type', 'points', 'accuracy'] : ['type', 'points'])
+
+        const declared = segment.points.length
+        const inherited = index === 0 ? 0 : 1
+        const total = declared + inherited
+        const counted = `(${inherited ? '1 inherited from the previous segment, ' : ''}${declared} declared)`
+        const verb = declared === 1 ? 'was' : 'were'
+        switch (segment.type) {
+            case 'bezier':
+                a.assert(total > 2, `Bezier Curve needs 3 or 4 points, but ${total} were provided ${counted}`)
+                break
+            case 'arc':
+                a.assert(total === 3, `Arc needs 3 points, but ${total} were provided ${counted}`)
+                break
+            case 'line':
+                a.assert(total > 1, `Line need at least 2 points, but ${total} ${verb} provided ${counted}`)
+                break
+            case 's_curve':
+                a.assert(total === 2, `S-Curve needs 2 points, but ${total} ${verb} provided ${counted}`)
+                break
+        }
     }
 
     // return shape function and its units
