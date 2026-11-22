@@ -1,0 +1,124 @@
+points:
+  zones:
+    matrix:
+      anchor.shift: [30, 20]
+      columns:
+        one:
+        two:
+      rows.only:
+  mirror:
+    ref: matrix_two_only
+    distance: 40
+outlines:
+  # the exact scenario of the original report: only the stacked circle should grow
+  stack-expand:
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+    - what: circle
+      where: matrix_one_only
+      radius: 5
+      operation: stack
+      expand: 1
+  # the hole grows, the rectangle around it does not
+  subtract-expand:
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+    - what: circle
+      where: matrix_one_only
+      radius: 3
+      operation: subtract
+      expand: 1
+  # scaling is relative to the global origin for a single shape...
+  stack-scale:
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+    - what: circle
+      where: matrix_one_only
+      radius: 4
+      operation: stack
+      scale: 0.5
+  # ...and for multiple shapes as well, mirrored ones included
+  add-scale:
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+    - what: circle
+      where: /two/
+      asym: both
+      radius: 4
+      scale: 0.5
+  # only the corners of the stacked rectangles get rounded, overlapping ones each on their own
+  stack-fillet:
+    - what: rectangle
+      where: true
+      size: 18
+    - what: rectangle
+      where: true
+      size: [22, 8]
+      operation: stack
+      fillet: 2
+  # the shapes of a part are modified together, not one by one
+  add-shrink:
+    - what: rectangle
+      where: matrix_one_only
+      size: 3
+      adjust.shift: [0, 15]
+    - what: rectangle
+      where: /matrix/
+      size: 19
+      expand: -2
+  # the modifiers of a part keep their scale, expand, fillet order
+  subtract-combined:
+    - what: rectangle
+      where: matrix_one_only
+      size: 40
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+      operation: subtract
+      scale: 0.5
+      expand: 1>
+      fillet: 0.5
+  # multiple shapes still intersect one after the other...
+  intersect-plain:
+    - what: rectangle
+      where: /matrix/
+      size: 19
+    - what: circle
+      where: [matrix_one_only, matrix_two_only]
+      radius: 15
+      operation: intersect
+  # ...and it's their common area that is expanded
+  intersect-expand:
+    - what: rectangle
+      where: /matrix/
+      size: 19
+    - what: circle
+      where: [matrix_one_only, matrix_two_only]
+      radius: 15
+      operation: intersect
+      expand: 2
+  # modifiers can't affect anything without a matching point
+  no-match:
+    - what: rectangle
+      where: matrix_one_only
+      size: 10
+    - what: circle
+      where: /nonexistent/
+      radius: 5
+      operation: intersect
+      expand: 1
+  # overlapping subtraction operands must be unioned before expansion
+  subtract-multi:
+    - what: rectangle
+      where: matrix_one_only
+      adjust.shift: [9.5, 0]
+      size: [60, 40]
+    - what: circle
+      where: [matrix_one_only, matrix_two_only]
+      radius: 12
+      operation: subtract
+      expand: 1
