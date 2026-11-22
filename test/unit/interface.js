@@ -360,6 +360,32 @@ describe('Interface', function() {
         renumbered.mirror_matrix_c.meta.col.name.should.equal(7)
     })
 
+    it('path segments', async function() {
+        const path = segments => ergogen.process({
+            'points.zones.matrix': {},
+            'outlines.shape': [{what: 'path', segments}]
+        })
+        const rejected = (segments, snippet) => path(segments).should.be.rejectedWith(snippet)
+        const points = count => [[0, 0], [10, 3], [20, 12], [14, 25]].slice(0, count).map(shift => ({shift}))
+        const line = {type: 'line', points: points(2)}
+        const inherited = '1 inherited from the previous segment'
+        return Promise.all([
+            rejected([{type: 'nope', points: points(3)}], 'Field "outlines.shape.0.segments.0.type" should be one of [line, arc, s_curve, bezier]!'),
+            rejected([line, {type: 'line', points: 'nope'}], 'Field "outlines.shape.0.segments.1.points" should be of type array!'),
+            rejected([{type: 'arc', points: points(3), accuracy: 1}], 'Unexpected key "accuracy" within field "outlines.shape.0.segments.0"!'),
+            rejected([line, {type: 'bezier', points: points(2), nope: 1}], 'Unexpected key "nope" within field "outlines.shape.0.segments.1"!'),
+            rejected([{type: 'line', points: points(1)}], 'Line need at least 2 points, but 1 was provided (1 declared)'),
+            rejected([{type: 'arc', points: points(2)}], 'Arc needs 3 points, but 2 were provided (2 declared)'),
+            rejected([{type: 's_curve', points: points(1)}], 'S-Curve needs 2 points, but 1 was provided (1 declared)'),
+            rejected([{type: 'bezier', points: points(2)}], 'Bezier Curve needs 3 or 4 points, but 2 were provided (2 declared)'),
+            rejected([line, {type: 'line', points: []}], `Line need at least 2 points, but 1 were provided (${inherited}, 0 declared)`),
+            rejected([line, {type: 'arc', points: points(3)}], `Arc needs 3 points, but 4 were provided (${inherited}, 3 declared)`),
+            rejected([line, {type: 's_curve', points: points(2)}], `S-Curve needs 2 points, but 3 were provided (${inherited}, 2 declared)`),
+            rejected([line, {type: 'bezier', points: points(1)}], `Bezier Curve needs 3 or 4 points, but 2 were provided (${inherited}, 1 declared)`),
+            path([line, {type: 'bezier', points: points(2), accuracy: 1}]).should.eventually.have.nested.property('outlines.shape.dxf')
+        ])
+    })
+
     it('engine', async function() {
         return Promise.all([
             ergogen.process({'meta.engine': 'invalid'}).should.be.rejectedWith('Invalid'),
