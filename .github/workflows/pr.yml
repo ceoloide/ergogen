@@ -1,11 +1,17 @@
 name: Check for 100% test coverage
 on:
+  # every pull request, whatever branch it targets (stacked pull requests included)
   pull_request:
-    branches: ["develop"]
+# a new push to a pull request cancels the run for the previous one
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      # report every node version, even when one of them fails
+      fail-fast: false
       matrix:
         node-version: ['24.x', '26.x']
     steps:
@@ -17,3 +23,11 @@ jobs:
       - run: npm ci
       - run: npm run coverage
       - run: npm run build
+  # one check with a stable name for the merge rule, whatever the node versions above
+  tests:
+    name: Tests
+    if: always()
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.build.result }}" = success
