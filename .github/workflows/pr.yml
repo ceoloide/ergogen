@@ -2,10 +2,15 @@ name: Check for 100% test coverage
 on:
   # every pull request, whatever branch it targets (stacked pull requests included)
   pull_request:
+  # every merge into a protected branch, as pull requests that pass apart can fail together
+  # github notifies whoever pushed or merged when this run fails
+  push:
+    branches: ['develop', 'v*']
 # a new push to a pull request cancels the run for the previous one
+# while every merge keeps its own run, so a failure points at the merge that caused it
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   build:
     runs-on: ubuntu-latest
