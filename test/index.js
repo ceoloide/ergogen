@@ -34,9 +34,12 @@ const handle_slash = (() => {
 // the --dump switch does nothing here
 
 what = what ? what.split(',') : false
+// a mistyped --what should fail, not quietly run nothing
+const unmatched = new Set(what || [])
 for (const unit of glob.sync(handle_slash(path.join(__dirname, 'unit', '*.js')))) {
     const base = path.basename(unit, '.js')
     if (what && !what.includes(base)) continue
+    unmatched.delete(base)
     require(`./unit/${base}.js`)
 }
 
@@ -117,10 +120,6 @@ const test = function(input_path) {
         // compare output vs. reference
         if (references.length) {
             for (const expected_path of references) {
-                let expected = fs.readFileSync(expected_path).toString()
-                if (expected_path.endsWith('.json')) {
-                    expected = JSON.parse(expected)
-                }
                 const file_name = path.basename(expected_path)
                 const ref_part = file_name.slice(file_name.indexOf('___') + 3)
                 const stem = ref_part.slice(0, ref_part.length - path.extname(ref_part).length)
@@ -136,6 +135,11 @@ const test = function(input_path) {
                         fs.writeJSONSync(expected_path, output_part, {spaces: 4})
                     }
                 } else {
+                    // the reference is only read here, so --dump can fill empty files
+                    let expected = fs.readFileSync(expected_path).toString()
+                    if (expected_path.endsWith('.json')) {
+                        expected = JSON.parse(expected)
+                    }
                     if (a.type(output_part)() == 'string') {
                         const parse_out = output_part.replace(lineends, '\n')
                         const parse_exp = expected.replace(lineends, '\n')
@@ -170,9 +174,11 @@ if (what) {
             title = cap(w)
             regex = path.join(__dirname, w, '*.yaml')
         }
+        const cases = glob.sync(handle_slash(regex))
+        if (cases.length) unmatched.delete(w)
         describe(title, function() {
             if (stages.includes(w)) check_orphans(w)
-            for (const i of glob.sync(handle_slash(regex))) {
+            for (const i of cases) {
                 test.call(this, i)
             }
         })
@@ -202,13 +208,16 @@ const dircompare = require('dir-compare')
 
 const cli_what = what ? what.filter(w => w.startsWith('cli')) : ['cli']
 
-for (let w of cli_what) {
-    if (!w.includes('/')) w += '/'
-    if (!w.endsWith('*')) w += '*'
+for (const w of cli_what) {
+    let pattern = w
+    if (!pattern.includes('/')) pattern += '/'
+    if (!pattern.endsWith('*')) pattern += '*'
+    const cases = glob.sync(handle_slash(path.join(__dirname, pattern)))
+    if (cases.length) unmatched.delete(w)
     describe('CLI', function() {
         this.timeout(120000)
         this.slow(120000)
-        for (const t of glob.sync(handle_slash(path.join(__dirname, w)))) {
+        for (const t of cases) {
             it(path.basename(t).split('_').join(' '), function() {
                 const command = read(t, 'command')
                 const output_path = exists(t, 'path') ? read(t, 'path') : 'output'
@@ -279,3 +288,6 @@ for (let w of cli_what) {
         }
     })
 }
+
+
+a.assert(!unmatched.size, `No tests match --what "${[...unmatched].join(',')}"!`)
