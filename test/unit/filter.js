@@ -74,4 +74,20 @@ describe('Filter', function() {
         filter.bind(this, 28, '', points).should.throw('Unexpected type')
     })
 
+    it('missing paths', function() {
+        const fresh = () => ({
+            origin: new Point(0, 0, 0, {name: 'origin'}),
+            other: new Point(5, 0, 0, {name: 'other'})
+        })
+        const pts = fresh()
+        // paths through a number or a missing key match nothing...
+        filter('x.a ~ 1', '', pts).should.deep.equal([])
+        filter('meta.foo.bar ~ 1', '', pts).should.deep.equal([])
+        // ...and leave the points as they were, so the origin keeps its x of 0
+        pts.should.deep.equal(fresh())
+        names(filter('x ~ 0', '', pts)).should.deep.equal(['origin'])
+        // inherited properties are not part of a point
+        filter('meta.constructor ~ /Object/', '', pts).should.deep.equal([])
+    })
+
 })

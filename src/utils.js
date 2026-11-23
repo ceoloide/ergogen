@@ -6,22 +6,25 @@ exports.deepcopy = value => {
     return JSON.parse(JSON.stringify(value))
 }
 
-const deep = exports.deep = (obj, key, val) => {
-    const levels = key.split('.')
-    const last = levels.pop()
-    let step = obj
-    for (const level of levels) {
-        step[level] = step[level] || {}
+// reads a dotted path through own properties only, so a missing path creates nothing,
+// and also returns the breadcrumbs of the field it reaches, written the way prepare.traverse writes them
+const lookup = exports.lookup = (root, path) => {
+    if (typeof path !== 'string') return {}
+    let step = root
+    const breadcrumbs = []
+    for (const level of path.split('.')) {
+        // own properties of strings (like "length" or an index) are still readable
+        if (step === null || step === undefined || !Object.prototype.hasOwnProperty.call(step, level)) return {}
+        breadcrumbs.push(Array.isArray(step) ? `[${level}]` : level)
         step = step[level]
     }
-    if (val === undefined) return step[last]
-    step[last] = val
-    return obj
+    return {value: step, breadcrumbs}
 }
 
+// only a missing (or null) value renders as empty, so 0 and false still show up
 exports.template = (str, vals={}) => {
     const regex = /\{\{([^}]*)\}\}/g
-    return str.replace(regex, (_, key) => (deep(vals, key) || '') + '')
+    return str.replace(regex, (_, key) => (lookup(vals, key).value ?? '') + '')
 }
 
 const eq = exports.eq = (a=[], b=[]) => {

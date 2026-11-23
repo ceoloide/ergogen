@@ -10,16 +10,17 @@ describe('Utils', function() {
         should.equal(u.deepcopy(), undefined)
     })
 
-    it('deep', function() {
-        const obj = {a: {b: {}}}
-        // deep setting
-        const res = u.deep(obj, 'a.b.c', 42)
-        res.should.equal(obj)
-        obj.a.b.c.should.equal(42)
-        // deep access
-        u.deep(obj, 'a.b.c').should.equal(42)
-        // deep access on nonexistent keys should be undefined without error
-        should.equal(u.deep(obj, 'non.existent.key'), undefined)
+    it('lookup', function() {
+        const obj = {a: {b: [0, 'xy']}}
+        // deep access, with breadcrumbs that write array levels as indices
+        u.lookup(obj, 'a.b.0').should.deep.equal({value: 0, breadcrumbs: ['a', 'b', '[0]']})
+        u.lookup(obj, 'a.b.1.length').value.should.equal(2)
+        // missing keys, paths through primitives and inherited properties resolve to nothing
+        u.lookup(obj, 'non.existent.key').should.deep.equal({})
+        u.lookup(obj, 'a.b.0.x').should.deep.equal({})
+        u.lookup(obj, 'constructor').should.deep.equal({})
+        // and none of them change the object
+        obj.should.deep.equal({a: {b: [0, 'xy']}})
     })
 
     it('template', function() {
@@ -34,10 +35,19 @@ describe('Utils', function() {
         ).should.equal('long_shortshortshort')
         u.template('{{a.b.c}}', {a: {b: {c: 'deep'}}}).should.equal('deep')
         u.template('{x: {{number}}, y: {{number}}}', {number: 5}).should.equal('{x: 5, y: 5}')
+        // present but falsy values render, while missing or null ones are empty
         u.template(
-            '{{literal}}{{zero}}{{false}}{{missing}}/{{key}}',
-            {literal: '{{key}} $& $1 $$', zero: 0, false: false, key: 'resolved'}
-        ).should.equal('{{key}} $& $1 $$/resolved')
+            '{{literal}}{{zero}}{{false}}{{missing}}{{nothing}}/{{key}}',
+            {literal: '{{key}} $& $1 $$', zero: 0, false: false, nothing: null, key: 'resolved'}
+        ).should.equal('{{key}} $& $1 $$0false/resolved')
+        // reading a missing path does not create it, and inherited properties are not read
+        const vals = {a: 'xy'}
+        u.template('{{b.c}}{{a.length}}{{constructor.name}}', vals).should.equal('2')
+        vals.should.deep.equal({a: 'xy'})
+        // so a template cannot reach into (and extend) a prototype either
+        const proto = {}
+        u.template('{{__proto__.injected.x}}', Object.create(proto)).should.equal('')
+        proto.should.deep.equal({})
     })
 
     it('eq', function() {
