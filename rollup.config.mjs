@@ -29,22 +29,28 @@ export const svg_outline_plugin = () => {
   }
 }
 
+// the browser bundle expects these libraries as globals, which the web UI supplies
+const globals = {
+  'makerjs': 'makerjs',
+  'js-yaml': 'jsyaml',
+  'mathjs': 'math',
+  'kle-serial': 'kle',
+  'hull': 'hull'
+}
+
 export default {
   input: 'src/ergogen.js',
-  external: ['makerjs', 'js-yaml', 'mathjs', 'kle-serial', 'jszip', 'hull'],
+  external: Object.keys(globals),
+  // a warning means a broken bundle (e.g., an unlisted dependency or a circular require)
+  onwarn: warning => {
+    throw new Error(warning.message)
+  },
   output: {
     name: 'ergogen',
     file: 'dist/ergogen.js',
     format: 'umd',
     banner: `/*!\n * Ergogen v${pkg.version}\n * https://ergogen.xyz\n */\n`,
-    globals: {
-      'makerjs': 'makerjs',
-      'js-yaml': 'jsyaml',
-      'mathjs': 'math',
-      'kle-serial': 'kle',
-      'jszip': 'jszip',
-      'hull': 'hull'
-    }
+    globals
   },
   plugins: [
     svg_outline_plugin(),
