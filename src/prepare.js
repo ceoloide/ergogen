@@ -65,24 +65,18 @@ const traverse = exports.traverse = (config, root, breadcrumbs, op) => {
     return config
 }
 
+// creates the levels a dotted key implies, and writes undefined values too,
+// so that an undefined array slot does not keep the value of the previous one
 exports.unnest = config => traverse(config, config, [], (target, key, val) => {
-    u.deep(target, key, val)
-})
-
-// read-only lookup, so that a missing path does not create intermediate objects in the config,
-// which also returns the breadcrumbs of the field it reaches, written the way traverse writes them
-const lookup = (root, path) => {
-    if (typeof path !== 'string') return {}
-    let step = root
-    const breadcrumbs = []
-    for (const level of path.split('.')) {
-        // own properties of strings (like "length" or an index) are still readable
-        if (step === null || step === undefined || !Object.prototype.hasOwnProperty.call(step, level)) return {}
-        breadcrumbs.push(Array.isArray(step) ? `[${level}]` : level)
+    const levels = key.split('.')
+    const last = levels.pop()
+    let step = target
+    for (const level of levels) {
+        step[level] = step[level] || {}
         step = step[level]
     }
-    return {value: step, breadcrumbs}
-}
+    step[last] = val
+})
 
 exports.inherit = config => {
     const cache = new Map()
@@ -138,7 +132,7 @@ exports.inherit = config => {
             if (!Array.isArray(candidates)) candidates = [candidates]
             const list = []
             for (const path of candidates) {
-                const ref = lookup(config, path)
+                const ref = u.lookup(config, path)
                 a.assert(ref.value !== undefined && ref.value !== null, `"${path}" (reached from "${breadcrumbs.join('.')}.$extends") does not name a valid inheritance target!`)
                 list.push(resolve(ref.value, ref.breadcrumbs))
             }
@@ -290,7 +284,7 @@ exports.concat = config => {
         const evaluate = node => {
             if (node.type == 'literal') return node.value
             if (node.type == 'call') return node.args.map(evaluate).join('')
-            const ref = lookup(config, node.path)
+            const ref = u.lookup(config, node.path)
             if (ref.value === undefined) {
                 throw new Error(`Could not resolve reference "${node.path}" in $concat at "${name}"!`)
             }

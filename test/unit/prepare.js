@@ -10,6 +10,8 @@ describe('Prepare', function() {
         p.unnest({'root': [{
             'a.b': 1
         }]}).should.deep.equal({root: [{a: {b: 1}}]})
+        // undefined values are written too, so an array slot does not repeat the previous one
+        p.unnest({arr: [1, undefined]}).arr.should.deep.equal([1, undefined])
     })
 
     it('extend', function() {

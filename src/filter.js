@@ -32,7 +32,7 @@ const similar = (keys, reference, name, units) => {
 
     // support strings, arrays, or objects as key
     const external_tester = (point, key) => {
-        const value = u.deep(point, key)
+        const value = u.lookup(point, key).value
         if (a.type(value)() == 'array') {
             return value.some(subkey => internal_tester(subkey))
         } else if (a.type(value)() == 'object') {
