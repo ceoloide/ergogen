@@ -6,18 +6,7 @@ const a = require('../src/assert')
 const ergogen = require('../src/ergogen')
 require('./helpers/mock').inject(ergogen)
 
-// `npm test -- --what=points --dump` passes the switches on every npm version,
-// while older npm versions also turn `npm test --what=points` into `npm_config_*` variables
-const flag = name => {
-    const index = process.argv.findIndex(arg => arg == `--${name}` || arg.startsWith(`--${name}=`))
-    if (index == -1) return process.env[`npm_config_${name}`]
-    const arg = process.argv[index]
-    if (arg.includes('=')) return arg.slice(arg.indexOf('=') + 1)
-    const next = process.argv[index + 1]
-    return next && !next.startsWith('-') ? next : 'true'
-}
-let what = flag('what')
-const dump = flag('dump')
+const {what, dump} = require('./helpers/options').parse(process.argv, process.env)
 const lineends = require('./helpers/fixture').lineends
 
 const handle_slash = (() => {
@@ -33,7 +22,6 @@ const handle_slash = (() => {
 // the --what switch supports each unit individually
 // the --dump switch does nothing here
 
-what = what ? what.split(',') : false
 // a mistyped --what should fail, not quietly run nothing
 const unmatched = new Set(what || [])
 for (const unit of glob.sync(handle_slash(path.join(__dirname, 'unit', '*.js')))) {
