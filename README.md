@@ -81,6 +81,9 @@ Get in touch on our **[Discord]**, and we can definitely find something you can 
 
 From an administrative standpoint, please note that we'd like to keep the Git history linear and the test suite comprehensive, so if you do issue a PR, make sure it's A) a straight chain of commits, B) it's always rebased on the current `develop`, and C) the test coverage remains at 100%.
 
+To check a change, run `npm ci` and then `npm run coverage`, which runs every test and fails below 100% coverage.
+While iterating, `npm test -- --what=assert,outlines/hull` runs only the named unit files (`test/unit/<name>.js`), stages (`test/<stage>/`), cases (`test/<stage>/<prefix>*.yaml`) or CLI cases (`cli/<prefix>`), and adding `--dump` rewrites their reference files for review.
+
 <br>
 
 ## Sponsors
