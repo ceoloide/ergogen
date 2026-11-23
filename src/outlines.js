@@ -347,7 +347,8 @@ const expand_shorthand = (config, name, units) => {
 exports.parse = (config, points, units) => {
 
     // output outlines will be collected here
-    const outlines = {}
+    // (without a prototype, so that a reference like "toString" doesn't find an inherited member)
+    const outlines = Object.create(null)
 
     // the config must be an actual object so that the exports have names
     config = a.sane(config, 'outlines', 'object')()

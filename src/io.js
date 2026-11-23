@@ -9,9 +9,10 @@ const svg_lib = require('./svg')
 const package_json = require('../package.json')
 
 const fake_require = exports.fake_require = injection => name => {
-    const dependencies = {
+    // without a prototype, so that require("constructor") is an unknown dependency too
+    const dependencies = Object.assign(Object.create(null), {
         makerjs
-    }
+    })
     if (name.endsWith('package.json')) {
         return package_json
     } else if (dependencies[name]) {

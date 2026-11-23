@@ -6,8 +6,9 @@ const prep = require('./prepare')
 const anchor = require('./anchor').parse
 const filter = require('./filter').parse
 
-const footprint_types = require('./footprints')
-const template_types = require('./templates')
+// registries have no prototype, so names like "__proto__" are ordinary entries
+const footprint_types = Object.assign(Object.create(null), require('./footprints'))
+const template_types = Object.assign(Object.create(null), require('./templates'))
 
 exports.inject_footprint = (name, fp) => {
     footprint_types[name] = fp
@@ -84,7 +85,9 @@ const footprint = exports._footprint = (points, net_indexer, component_indexer, 
         }
 
         // combine default value with potential user override
-        let value = params[param_name] !== undefined ? params[param_name] : parsed_def.value
+        // (read as an own field, so that a param named like "toString" keeps its default)
+        const override = Object.prototype.hasOwnProperty.call(params, param_name) ? params[param_name] : undefined
+        let value = override !== undefined ? override : parsed_def.value
         const type = parsed_def.type
 
         // templating support, with conversion back to raw datatypes
@@ -182,14 +185,15 @@ exports.parse = (config, points, outlines, units) => {
         }
 
         // making a global net index registry
-        const nets = {"": 0}
+        // (without a prototype, so that nets like "constructor" or "__proto__" are ordinary entries)
+        const nets = Object.assign(Object.create(null), {"": 0})
         const net_indexer = net => {
             if (nets[net] !== undefined) return nets[net]
             const index = Object.keys(nets).length
             return nets[net] = index
         }
-        // and a component indexer
-        const component_registry = {}
+        // and a component indexer, likewise without a prototype
+        const component_registry = Object.create(null)
         const component_indexer = _class => {
             if (!component_registry[_class]) {
                 component_registry[_class] = 0

@@ -112,6 +112,32 @@ describe('Internals', function() {
         result.pcbs.board.should.not.contain('first-footprint-body')
     })
 
+    it('should inject footprints and templates with prototype names', async function() {
+        ergogen.inject('footprint', '__proto__', {params: {}, body: () => 'prototype-footprint-body'})
+        ergogen.inject('template', '__proto__', {convert_outline: () => '', body: p => `prototype-template ${p.footprints.join(' ')}`})
+        const result = await ergogen.process({
+            points: {zones: {matrix: null}},
+            pcbs: {board: {template: '__proto__', footprints: [{what: '__proto__'}]}}
+        })
+        result.pcbs.board.should.equal('prototype-template prototype-footprint-body')
+    })
+
+    it('should keep the defaults of footprint params named like prototype members', async function() {
+        ergogen.inject('footprint', 'prototype_params', {
+            params: {toString: 'default', constructor: 'other_default'},
+            body: p => `prototype-params ${p.toString} ${p.constructor}`
+        })
+        const result = await ergogen.process({
+            points: {zones: {matrix: null}},
+            pcbs: {board: {footprints: [
+                {what: 'prototype_params'},
+                {what: 'prototype_params', params: {toString: 'given'}}
+            ]}}
+        })
+        result.pcbs.board.should.contain('prototype-params default other_default')
+        result.pcbs.board.should.contain('prototype-params given other_default')
+    })
+
     it('should validate injected outline functions', function() {
         for (const bad of [{}, null]) {
             ergogen.inject.bind(this, 'outline', 'bad', bad).should.throw('Outline "bad" should be a function!')
@@ -137,6 +163,9 @@ describe('Internals', function() {
             'outlines/dup.js': 'module.exports = () => {}',
             'outlines/dup.svg': '<svg><path d="M 0 0 L 10 0 L 10 10 Z" /></svg>'
         })).should.be.rejectedWith('Duplicate outline "dup" in bundle!')
+        // bundled modules can't require members inherited from Object.prototype
+        await io.unpack(bundle_with({'outlines/proto.js': 'module.exports = require("constructor")'}))
+            .should.be.rejectedWith('Unknown dependency "constructor"')
     })
 })
 

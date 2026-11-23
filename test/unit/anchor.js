@@ -75,6 +75,15 @@ describe('Anchor', function() {
           },
           ref : 'ten'
         }, 'name', points).should.throw()
+        // methods inherited from Object.prototype aren't aggregators
+        for (const method of ['constructor', 'toString', '__proto__']) {
+            parse({
+                aggregate: {
+                    method,
+                    parts: ['o', 'ten']
+                }
+            }, 'name', points).should.throw(`Unknown aggregator method "${method}"`)
+        }
     })
     it('intersect', function() {
         // points that intersect on a negative Y axis

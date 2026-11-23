@@ -1,0 +1,12 @@
+points.zones.matrix:
+  columns.one:
+  rows.only:
+pcbs.board.footprints:
+  - what: pad
+    params: {designator: constructor, net: constructor, back: false}
+  - what: pad
+    params: {designator: toString, net: __proto__, back: false}
+  - what: pad
+    params: {designator: toString, net: toString, back: false}
+  - what: pad
+    params: {designator: __proto__, net: constructor, back: false}

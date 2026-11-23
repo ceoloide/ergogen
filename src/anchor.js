@@ -14,7 +14,8 @@ const mirror_ref = exports.mirror = (ref, mirror=true) => {
 
 const aggregator_common = ['parts', 'method']
 
-const aggregators = {
+// without a prototype, so that methods like "constructor" are unknown
+const aggregators = Object.assign(Object.create(null), {
     average: (config, name, parts) => {
         a.unexpected(config, name, aggregator_common)
         const len = parts.length
@@ -63,7 +64,7 @@ const aggregators = {
 
         return intersection_point
     },
-}
+})
 
 const anchor = exports.parse = (raw, name, points={}, start=new Point(), mirror=false) => units => {
 
