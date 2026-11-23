@@ -203,8 +203,14 @@ if (what) {
 const joiner = (a, b) => path.join(a, b)
 const read = (...args) => fs.readFileSync(args.reduce(joiner, '')).toString()
 const exists = (...args) => fs.existsSync(args.reduce(joiner, ''))
+const os = require('os')
 const { execSync } = require('child_process')
 const dircompare = require('dir-compare')
+
+// each command runs in a fresh private folder, so it never touches the developer's `output`
+// and concurrent runs never share one. these links keep its repo-relative paths working
+const root = path.join(__dirname, '..')
+const shared = ['node_modules', 'src', 'test']
 
 const cli_what = what ? what.filter(w => w.startsWith('cli')) : ['cli']
 
@@ -217,11 +223,20 @@ for (const w of cli_what) {
     describe('CLI', function() {
         this.timeout(120000)
         this.slow(120000)
+        let work
+        beforeEach(function() {
+            work = fs.mkdtempSync(path.join(os.tmpdir(), 'ergogen-cli-'))
+            for (const name of shared) fs.symlinkSync(path.join(root, name), path.join(work, name), 'junction')
+        })
+        // runs after failures too, and unlinks first so the removal never reaches into the repo
+        afterEach(function() {
+            for (const name of shared) fs.removeSync(path.join(work, name))
+            fs.removeSync(work)
+        })
         for (const t of cases) {
             it(path.basename(t).split('_').join(' '), function() {
                 const command = read(t, 'command')
-                const output_path = exists(t, 'path') ? read(t, 'path') : 'output'
-                fs.removeSync(output_path)
+                const output_path = path.join(work, exists(t, 'path') ? read(t, 'path') : 'output')
                 const version_regex = /\bv\d+\.\d+\.\d+(\-develop)?\b/
                 // correct execution
                 if (!exists(t, 'error')) {
@@ -231,7 +246,7 @@ for (const w of cli_what) {
                             .replace(version_regex, '<version>')
                             .replace(lineends, '\n')
                     }
-                    const actual_log = execSync(command).toString()
+                    const actual_log = execSync(command, {cwd: work}).toString()
                         .replace(version_regex, '<version>')
                         .replace(lineends, '\n')
                     if (dump) {
@@ -252,8 +267,6 @@ for (const w of cli_what) {
                     })
                     if (dump) {
                         fs.moveSync(output_path, ref_path, {overwrite: true})
-                    } else {
-                        fs.removeSync(output_path)
                     }
                     actual_log.should.equal(ref_log)
                     comp_res.same.should.be.true
@@ -266,7 +279,7 @@ for (const w of cli_what) {
                         .filter(line => line.length > 0)
                         .join('\n')
                     try {
-                        execSync(command, {stdio: 'pipe'})
+                        execSync(command, {cwd: work, stdio: 'pipe'})
                         throw 'should_have_thrown'
                     } catch (ex) {
                         if (ex === 'should_have_thrown') {
