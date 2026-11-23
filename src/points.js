@@ -73,7 +73,8 @@ const render_zone = exports._render_zone = (zone_name, zone, anchor, global_key,
 
     // algorithm prep
 
-    const points = {}
+    // point registries have no prototype, so names like "constructor" or "__proto__" are ordinary entries
+    const points = Object.create(null)
     const rotations = []
     const zone_anchor = anchor.clone()
     // transferring the anchor rotation to "real" rotations
@@ -223,7 +224,7 @@ const render_zone = exports._render_zone = (zone_name, zone, anchor, global_key,
             running_anchor = point.clone()
 
             // apply independent adjustments
-            point = anchor_lib.parse(key.adjust, `${key.name}.adjust`, {}, point)(units)
+            point = anchor_lib.parse(key.adjust, `${key.name}.adjust`, Object.create(null), point)(units)
 
             // save new key
             point.meta = key
@@ -283,8 +284,9 @@ const perform_mirror = exports._perform_mirror = (point, axis, units) => {
 
 const perform_autobind = exports._perform_autobind = (points, units) => {
 
-    const bounds = {}
-    const col_lists = {}
+    // keyed by zone and column names, so without a prototype
+    const bounds = Object.create(null)
+    const col_lists = Object.create(null)
     const mirrorzone = p => (p.meta.mirrored ? 'mirror_' : '') + p.meta.zone.name
 
     // round one: get column upper/lower bounds and per-zone column lists
@@ -293,7 +295,7 @@ const perform_autobind = exports._perform_autobind = (points, units) => {
         const zone = mirrorzone(p)
         const col = p.meta.col.name
 
-        if (!bounds[zone]) bounds[zone] = {}
+        if (!bounds[zone]) bounds[zone] = Object.create(null)
         if (!bounds[zone][col]) bounds[zone][col] = {min: Infinity, max: -Infinity}
         if (!col_lists[zone]) col_lists[zone] = Object.keys(p.meta.zone.columns)
 
@@ -362,7 +364,7 @@ exports.parse = (config, units) => {
     const global_key = check_key_reserved_fields(a.sane(config.key || {}, 'points.key', 'object')(), 'points.key')
     const global_rotate = a.sane(config.rotate || 0, 'points.rotate', 'number')(units)
     const global_mirror = config.mirror
-    let points = {}
+    let points = Object.create(null)
 
     // rendering zones
     for (let [zone_name, zone] of Object.entries(zones)) {
@@ -443,7 +445,7 @@ exports.parse = (config, units) => {
     points = Object.assign(points, global_mirrored_points)
 
     // removing temporary points
-    const filtered = {}
+    const filtered = Object.create(null)
     for (const [k, p] of Object.entries(points)) {
         if (p.meta.skip) continue
         filtered[k] = p

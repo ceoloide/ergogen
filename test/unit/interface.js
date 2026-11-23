@@ -256,6 +256,60 @@ describe('Interface', function() {
         mirrored.matrix_c_relabel.meta.mirror.mirror.should.deep.equal({key: 'inner'})
     })
 
+    it('prototype names', async function() {
+        const box = {what: 'rectangle', size: 5}
+        const boxes = result => result.outlines.o.dxf.split('\n').filter(line => line.trim() == 'LINE').length / 4
+
+        for (const name of ['constructor', 'toString', '__proto__']) {
+
+            // undefined names are unknown, instead of resolving to something inherited from Object.prototype
+            await ergogen.process({
+                'points.zones.matrix': {},
+                'outlines.o': [{what: 'outline', name}]
+            }).should.be.rejectedWith('does not name an existing outline')
+            await ergogen.process({
+                'points.zones.matrix': {},
+                'outlines.o': [box],
+                'cases.c': [{what: 'outline', name}]
+            }).should.be.rejectedWith('does not name a valid outline')
+            await ergogen.process({
+                'points.zones.matrix': {},
+                'outlines.o': [{...box, where: {ref: name}}]
+            }).should.be.rejectedWith(`Unknown point reference "${name}"`)
+            await ergogen.process({
+                'points.zones.matrix.key.adjust.ref': name
+            }).should.be.rejectedWith(`Unknown point reference "${name}"`)
+            await ergogen.process({
+                'points.zones': {matrix: {}, other: {anchor: {ref: name}}}
+            }).should.be.rejectedWith(`Unknown point reference "${name}"`)
+
+            // while points named like that can be referenced and filtered as usual
+            boxes(await ergogen.process({
+                'points.zones.matrix.key.name': name,
+                'outlines.o': [{...box, where: {ref: name}}, {...box, where: name, adjust: {shift: [20, 0]}}]
+            })).should.equal(2)
+            // (a clone filter only adds the mirror pair of the matched point, if there is one)
+            boxes(await ergogen.process({
+                'points.mirror': 50,
+                'points.zones.matrix.key': {name, asym: 'clone'},
+                'outlines.o': [{...box, where: `mirror_${name}`, asym: 'both'}]
+            })).should.equal(1)
+        }
+
+        // zones and columns named like that are autobound as usual
+        const bound = await ergogen.process({points: {zones: {constructor: {
+            columns: {toString: {}, constructor: {}},
+            rows: {bottom: {}, top: {}}
+        }}}})
+        const binds = Object.fromEntries(Object.entries(bound.points).map(([name, p]) => [name, p.meta.bind]))
+        binds.should.deep.equal({
+            constructor_toString_bottom: [10, 10, 0, 0],
+            constructor_toString_top: [0, 10, 10, 0],
+            constructor_constructor_bottom: [10, 0, 0, 10],
+            constructor_constructor_top: [0, 0, 10, 10]
+        })
+    })
+
     it('mirror axes', async function() {
         // every way to give a mirror axis, where a point at x=10 is mirrored to 2 * axis - 10
         const axes = {
